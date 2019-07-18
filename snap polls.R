@@ -29,7 +29,7 @@ for(i in 1:10){
 #                   USER INTERFACE                    #
 #######################################################
 ui <- fluidPage(
-  titlePanel("Journal Article Database"),
+  titlePanel("Snap Poll (testing ver.)"),
   sidebarLayout(
     sidebarPanel(
       selectInput("dataSelect","Choose snap poll..",choices=c("Select...","Snap Poll I"="snap_1",
@@ -56,9 +56,10 @@ server <- function(input, output, session) {
   })
   ## create graph ##
   output$graph<-renderPlot({
-    ggplot(get(input$dataSelect),aes(x=qg_104)) +
-       geom_bar(stat="count") +
-       theme(axis.text.x=element_text(angle=45))
+    ggplot(get(input$dataSelect),aes(x=gender)) +
+       geom_bar(stat="count",fill="#ffbfd7") +
+       theme(axis.text.x=element_text(angle=45)) + 
+       theme_bw()
   })
   ## list of questions ##
   output$questions<-renderTable({
