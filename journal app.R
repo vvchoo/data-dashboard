@@ -51,16 +51,23 @@ allfilters<-c("hello")
 ######################################################################################
 ui <- fluidPage(
           titlePanel("Journal Article Database"),
-          sidebarLayout(
-              sidebarPanel(
-                  selectInput("addFilter","Filter by..",choices=c("Select...","Contemporary","Epistemology","Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")),
-                  sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep=""), #change when updated
-                  radioButtons("percentInput","Percentage or frequency",choices=c("Frequency","Percentage")),
-                  radioButtons("ygInput","Show by..",c("Year","Variable"))),
-                  mainPanel(plotlyOutput("plotly"),
-                            tableOutput("view")))
+          fluidRow(
+            column(4,
+              wellPanel(
+                h4(b("See all articles which..")),
+              selectInput("addFilter","Filter by..",choices=c("Select...","Contemporary","Epistemology","Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period"))),
+            wellPanel(
+                h4("Year range"),
+               sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep="")), #change when updated
+          wellPanel(
+                h4("Show by..."),
+               radioButtons("percentInput","",choices=c("Frequency","Percentage")),
+               radioButtons("ygInput","Show by..",c("Year","Variable")))),
+            column(8,
+                  plotlyOutput("plotly"),
+                  tableOutput("view"))))
           #tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")
-)
+
 
 #######################################################################################
 #                                       SERVER                                        #
@@ -222,7 +229,8 @@ output$plotly <- renderPlotly({
        ylab("Frequency") +
        plot_theme
   }
-  ggplotly(p, hoverformat='.0f',height=700) %>%
+  
+  ggplotly(p, height=700) %>%
     layout(margin=list(b=300,l=100),autosize=T)
 })
 
