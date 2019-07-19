@@ -231,7 +231,7 @@ output$plotly <- renderPlotly({
   }
   
   ggplotly(p, height=700) %>%
-    layout(margin=list(b=300,l=100),autosize=T)
+    layout(margin=list(b=300,l=100),autosize=T,yaxis=list(hoverformat=".9f%"))
 })
 
 }
