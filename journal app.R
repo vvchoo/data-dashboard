@@ -23,13 +23,20 @@ for(i in 11:91){
 
 ## gather data set ##
 JAD <- JAD %>% 
-  gather(TimePeriod, TimePeriod_value,`Pre-history to 476 AD`:`No time period`) %>% filter(TimePeriod_value!="") %>%
-  gather(Level,Level_value,`Individual Level`:`No Level`) %>% filter(Level_value!="") %>%
-  gather(Focus,Focus_value,`Alliances`:`Other`) %>% filter(Focus_value!="") %>%
-  gather(Seriously,Seriously_value,`Realism Taken Seriously`:`Atheoretic/None Taken Seriously`) %>% filter(Seriously_value!="") %>%
-  gather(Synthesis,Synthesis_value,`Realism Synthesis`:`No Synthesis`) %>% filter(Synthesis_value!="") %>%
-  gather(Methodology,Methodology_value,`Analytic/non-formal`:`Quantitative`) %>% filter(Methodology_value!="") %>%
-  gather(Region,Region_value,`Antarctica`:`United States`) %>% filter(Region_value!="") %>%
+  gather(TimePeriod, TimePeriod_value,`Pre-history to 476 AD`:`No time period`) %>% 
+  filter(TimePeriod_value!="") %>%
+  gather(Level,Level_value,`Individual Level`:`No Level`) %>% 
+  filter(Level_value!="") %>%
+  gather(Focus,Focus_value,`Alliances`:`Other`) %>% 
+  filter(Focus_value!="") %>%
+  gather(Seriously,Seriously_value,`Realism Taken Seriously`:`Atheoretic/None Taken Seriously`) %>% 
+  filter(Seriously_value!="") %>%
+  gather(Synthesis,Synthesis_value,`Realism Synthesis`:`No Synthesis`) %>% 
+  filter(Synthesis_value!="") %>%
+  gather(Methodology,Methodology_value,`Analytic/non-formal`:`Quantitative`) %>% 
+  filter(Methodology_value!="") %>%
+  gather(Region,Region_value,`Antarctica`:`United States`) %>% 
+  filter(Region_value!="") %>%
   select(pubID,journal,year,Paradigm,Epistemology,IssueArea,Ideational,Material,Contemporary,PolicyPrescription,TimePeriod,Level,Focus,Seriously,Synthesis,Methodology,Region)
 
 JAD$TimePeriod <- factor(JAD$TimePeriod, levels=c("Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period"))
@@ -37,6 +44,7 @@ JAD$TimePeriod <- factor(JAD$TimePeriod, levels=c("Pre-history to 476 AD","476 A
 ## set up plot theme ##
 plot_theme<-theme_bw() +
             theme(axis.text.x=element_text(angle=50), axis.title.x=element_text(vjust=1.5),axis.title.y=element_text(hjust=1.5))
+allfilters<-c("hello")
 
 ######################################################################################
 #                                    USER INTERFACE                                  #
@@ -49,8 +57,9 @@ ui <- fluidPage(
                   sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep=""), #change when updated
                   radioButtons("percentInput","Percentage or frequency",choices=c("Frequency","Percentage")),
                   radioButtons("ygInput","Show by..",c("Year","Variable"))),
-                  mainPanel(plotlyOutput("plotly"))),
-          tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")
+                  mainPanel(plotlyOutput("plotly"),
+                            tableOutput("view")))
+          #tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")
 )
 
 #######################################################################################
@@ -135,18 +144,23 @@ observeEvent(input$ygInput, {
 })
 
 #### create filtered data set ####
+allfilters<-c("hello","world")
 filtered<-reactive({
   data<-JAD
   
   if(input$ygInput=="Year"){data<-data %>% group_by(year) %>% mutate(year_distinct=n_distinct(pubID))}  # total distinct articles a year #
-  if(input$ygInput=="Variable"){data<-data %>% mutate(filter_N=n_distinct(pubID))}  # total distinct articles overall #
-
+  
 ## filter conditions ##
   if(!is.null(input$contempFilter)){data<-data[data$Contemporary %in% input$contempFilter,]}
+                                    #allfilters<-c(allfilters,input$contempFilter)
   if(!is.null(input$epistFilter)){data<-data[data$Epistemology %in% input$epistFilter,]}
+                                  #allfilters<-c(allfilters,input$epistFilter)
   if(!is.null(input$focusFilter)){data<-data[data$Focus %in% input$focusFilter,]}
+                                  #allfilters<-c(allfilters,input$focusFilter)
   if(!is.null(input$ideaFilter)){data<-data[data$Ideational %in% input$ideaFilter,]}
+                                 #allfilters<-c(allfilters,input$ideaFilter)
   if(!is.null(input$issueFilter)){data<-data[data$IssueArea %in% input$issueFilter,]}
+                                  #allfilters<-c(allfilters,input$issueFilter)
   if(!is.null(input$levelFilter)){data<-data[data$Level %in% input$levelFilter,]}
   if(!is.null(input$methodFilter)){data<-data[data$Methodology %in% input$methodFilter,]}
   if(!is.null(input$materialFilter)){data<-data[data$Material %in% input$materialFilter,]}
@@ -169,11 +183,16 @@ filtered<-reactive({
       data<-data %>% group_by(year) %>% mutate(distinct_filtered=n_distinct(pubID)) # find number of distinct articles after filtering #
       data<-data %>% group_by(year) %>% mutate(year_filtered=n())  # find number of all observations in a year #
       data<-data %>% mutate(Percentage=((distinct_filtered/year_filtered)/year_distinct)*100)}  # create percentages to sum for stat_summary #
-  if(input$percentInput=="Percentage" & input$ygInput=="Variable"){  # varFilter percentages #
-      data<-data %>% group_by_(input$varFilter) %>% mutate(filter=n_distinct(pubID)) %>% mutate(filter_n=n()) # find unique articles in x-axis #
-      data<-data %>% mutate(Percentage=((filter/filter_n)/filter_N)*100)} # create actual percentages to sum for stat_summary #
+  if(input$percentInput=="Percentage" & input$ygInput=="Variable"){  # varFilter percentages #     
+      data<-data %>% group_by_(input$varFilter) %>% mutate(new_n=n_distinct(pubID)) %>% mutate(filter_n=n())  # find how articles in x-axis #
+      data<-data %>% ungroup() %>% mutate(filter=n_distinct(pubID))# find unique articles #
+      data<-data %>% mutate(Percentage=(new_n/filter/filter_n)*100)} # create actual percentages to sum for stat_summary #
   
   data<-as.data.frame(data)
+})
+
+output$view<-renderTable({
+  table(allfilters)
 })
 
 ## create plot ##
@@ -206,6 +225,8 @@ output$plotly <- renderPlotly({
   ggplotly(p, hoverformat='.0f',height=700) %>%
     layout(margin=list(b=300,l=100),autosize=T)
 })
+
 }
 
 shinyApp(ui = ui, server = server)
+
