@@ -49,7 +49,8 @@ plot_theme<-theme_bw() +
 #                                    USER INTERFACE                                  #
 ######################################################################################
 ui <- fluidPage(
-  titlePanel(h1(strong("Journal Article Database"))),
+  titlePanel(h1(strong("Journal Article Database")),
+             windowTitle="TRIP Journal Article Database"),
   br(),
   fluidRow(
     column(4,
@@ -58,16 +59,15 @@ ui <- fluidPage(
                       h4("See all articles which are..."),
              selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")))),
            wellPanel(
-             h4("Year range"),
+             h4("Article year range"),
              sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep="")), #change when updated
            wellPanel(
-             h4("Show by..."),
+             tags$div(id="yearFilter",
+                      h4("Show by..."),
              radioButtons("percentInput","",choices=c("Frequency","Percentage")),
-             radioButtons("ygInput","Show by..",c("Year","Variable")))),
-    column(8,
-           plotlyOutput("plotly"),
-           br(),
-           wellPanel(textOutput("view")))),
+             radioButtons("ygInput","Show by..",c("Year","Variable"))))),
+    column(8,verticalLayout(
+             plotlyOutput("plotly"),fluid=TRUE))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
 
 
@@ -149,7 +149,7 @@ server <- function(input, output, session) {
         ui=tags$div(id="varFilter",
                     selectInput("varFilter","X-Axis", c("Journal"="journal","Paradigm","Epistemology","Issue Area"="IssueArea","Time Period"="TimePeriod","Level","Methodology","Region","Focus","Policy Prescription"="PolicyPrescription"))))
     } else {
-      removeUI(selector="div:has(> #varFilter)")
+      removeUI(selector="#varFilter")
     }
   })
   
