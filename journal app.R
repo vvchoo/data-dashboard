@@ -12,7 +12,7 @@ JAD<-JAD[c(1:10,23:25,36:38,11:22,26:35,39:97)]
 JAD<-JAD[-c(2,3,4,7,8,9)]
 
 ## rename variables ##
-names(JAD)<-c("pubID","journal","year","Paradigm","Ideational","Material","Epistemology","Contemporary","PolicyPrescription","IssueArea","Realism Taken Seriously","Liberalism Taken Seriously","Marxism Taken Seriously","Constructivism Taken Seriously","Non-paradigmatic Taken Seriously","Atheoretic/None Taken Seriously","Realism Synthesis","Liberalism Synthesis","Marxism Synthesis","Constructivism Synthesis","Non-paradigmatic Synthesis","No Synthesis","Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period","Individual Level","State Level","International Level", "No Level","Analytic/non-formal","Counterfactual","Descriptive","Experimental","Formal Modeling","Policy analysis","Qualitative","Quantitative","Antarctica","Canada/Western Europe","East Asia","FSU / Eastern Europe","Global","Latin America","Middle East / North Africa","No region","Oceania","South Asia","Southeast Asia","Subsaharan Africa","United States","Alliances","Balance of Power","Bargaining Deterrence Strategy","Development","Diplomacy","Domestic Politics","Economic Interdependence","Environment","Ethnicity/Religion","Foreign Aid","Foreign Policy","Gender","Humanitarian","Intergovernmental Organization","Interstate Crisis","Interstate War","International Law","Intrastate Conflict","Discipline of IR","International Regimes","Migration","Monetary Policy","Non-governmental Organizations","North-South Relations","Public Health","Public Opinion","Regime Type","Regional Integration","Sanctions","Terrorism","Trade","Weapons Systems","Weapons of Mass Destruction Proliferation","Other")
+names(JAD)<-c("pubID","journal","year","Paradigm","Ideational","Material","Epistemology","Contemporary","PolicyPrescription","IssueArea","Realism Taken Seriously","Liberalism Taken Seriously","Marxism Taken Seriously","Constructivism Taken Seriously","Non-paradigmatic Taken Seriously","Atheoretic/None Taken Seriously","Realism Synthesis","Liberalism Synthesis","Marxism Synthesis","Constructivism Synthesis","Non-paradigmatic Synthesis","No Synthesis","Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period","Level one","Level two","Level three", "No Level","Analytic/non-formal","Counterfactual","Descriptive","Experimental","Formal Modeling","Policy analysis","Qualitative","Quantitative","Antarctica","Canada/Western Europe","East Asia","FSU / Eastern Europe","Global","Latin America","Middle East / North Africa","No region","Oceania","South Asia","Southeast Asia","Subsaharan Africa","United States","Alliances","Balance of Power","Bargaining Deterrence Strategy","Development","Diplomacy","Domestic Politics","Economic Interdependence","Environment","Ethnicity/Religion","Foreign Aid","Foreign Policy","Gender","Humanitarian","Intergovernmental Organization","Interstate Crisis","Interstate War","International Law","Intrastate Conflict","Discipline of IR","International Regimes","Migration","Monetary Policy","Non-governmental Organizations","North-South Relations","Public Health","Public Opinion","Regime Type","Regional Integration","Sanctions","Terrorism","Trade","Weapons Systems","Weapons of Mass Destruction Proliferation","Other")
 
 ## rewrite JAD yes/no ##
 i<-11
@@ -25,7 +25,7 @@ for(i in 11:91){
 JAD <- JAD %>% 
   gather(TimePeriod, TimePeriod_value,`Pre-history to 476 AD`:`No time period`) %>% 
   filter(TimePeriod_value!="") %>%
-  gather(Level,Level_value,`Individual Level`:`No Level`) %>% 
+  gather(Level,Level_value,`Level one`:`No Level`) %>% 
   filter(Level_value!="") %>%
   gather(Focus,Focus_value,`Alliances`:`Other`) %>% 
   filter(Focus_value!="") %>%
@@ -57,7 +57,7 @@ ui <- fluidPage(
            wellPanel(
              tags$div(id="newFilter",
                       h4("See all articles which are..."),
-             selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")))),
+             selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")))),
            wellPanel(
              h4("Article year range"),
              sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep="")), #change when updated
@@ -132,11 +132,11 @@ server <- function(input, output, session) {
         selector="#newFilter",
         where="afterEnd",
         ui=tags$div(selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c(names(table(JAD$TimePeriod))))))
-    } else if(input$addFilter=="Focus"){ 
+    } else if(input$addFilter=="Substantive Focus"){ 
       insertUI(
         selector="#newFilter",
         where="afterEnd",
-        ui=tags$div(selectInput("focusFilter", "Focus area",multiple=TRUE,choices=c(names(table(JAD$Focus))))))
+        ui=tags$div(selectInput("focusFilter", "Substantive Focus",multiple=TRUE,choices=c(names(table(JAD$Focus))))))
     }
   })
   
@@ -147,7 +147,7 @@ server <- function(input, output, session) {
         selector="#ygInput",
         where="afterEnd",
         ui=tags$div(id="varFilter",
-                    selectInput("varFilter","X-Axis", c("Journal"="journal","Paradigm","Epistemology","Issue Area"="IssueArea","Time Period"="TimePeriod","Level","Methodology","Region","Focus","Policy Prescription"="PolicyPrescription"))))
+                    selectInput("varFilter","X-Axis", c("Journal"="journal","Paradigm","Epistemology","Issue Area"="IssueArea","Time Period"="TimePeriod","Level","Methodology","Region","Substantive Focus"="Focus","Policy Prescription"="PolicyPrescription"))))
     } else {
       removeUI(selector="#varFilter")
     }
