@@ -55,17 +55,18 @@ ui <- fluidPage(
   fluidRow(
     column(4,
            wellPanel(
+             tags$div(id="yearFilter",
+                      h4("Show by:"),
+             radioButtons("percentInput","Frequency or Percentage",choices=c("Frequency","Percentage")),
+             radioButtons("ygInput","Year or Variable",c("Year","Variable")))),
+           wellPanel(
              tags$div(id="newFilter",
-                      h4("See all articles which are..."),
-             selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")))),
+                      h4("See all articles which are:"),
+                      selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")),
+                      uiOutput("epistFilter"),uiOutput("contempFilter"),uiOutput("focusFilter"),uiOutput("ideaFilter"),uiOutput("issueFilter"),uiOutput("levelFilter"),uiOutput("materialFilter"),uiOutput("methodFilter"),uiOutput("paradigmFilter"),uiOutput("policyFilter"),uiOutput("regionFilter"),uiOutput("timeFilter"))),
            wellPanel(
              h4("Article year range"),
-             sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep="")), #change when updated
-           wellPanel(
-             tags$div(id="yearFilter",
-                      h4("Show by..."),
-             radioButtons("percentInput","",choices=c("Frequency","Percentage")),
-             radioButtons("ygInput","Show by..",c("Year","Variable"))))),
+             sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep=""))), #change when updated),
     column(8,verticalLayout(
              plotlyOutput("plotly"),fluid=TRUE))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
@@ -78,65 +79,53 @@ server <- function(input, output, session) {
   ## add new filter button ##  
   observeEvent(input$addFilter, {
     if(input$addFilter=="Paradigm") {
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("paradigmFilter", "Paradigm",multiple=TRUE,choices=c(names(table(JAD$Paradigm))))))
+      output$paradigmFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("paradigmFilter", "Paradigm",multiple=TRUE,choices=c(names(table(JAD$Paradigm))))))})
     } else if(input$addFilter=="Epistemology"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("epistFilter", "Epistemology",multiple=TRUE,choices=c(names(table(JAD$Epistemology))))))
+      output$epistFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("epistFilter", "Epistemology",multiple=TRUE,choices=c(names(table(JAD$Epistemology))))))})
     } else if(input$addFilter=="Policy Prescription"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("policyFilter", "Policy Prescription",multiple=TRUE,choices=c("Yes","No"))))
+      output$policyFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("policyFilter", "Policy Prescription",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Contemporary"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("contempFilter", "Contemporary",multiple=TRUE,choices=c("Yes","No"))))
+      output$contempFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("contempFilter", "Contemporary",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Level of Analysis"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("levelFilter", "Level of Analysis",multiple=TRUE,choices=c(names(table(JAD$Level))))))
+      output$levelFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("levelFilter", "Level of Analysis",multiple=TRUE,choices=c(names(table(JAD$Level))))))})
     } else if(input$addFilter=="Ideational"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("ideaFilter", "Ideational",multiple=TRUE,choices=c("Yes","No"))))
+      output$ideaFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("ideaFilter", "Ideational",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Issue Area"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("issueFilter", "Issue Area",multiple=TRUE,choices=c(names(table(JAD$IssueArea))))))
+      output$issueFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("issueFilter", "Issue Area",multiple=TRUE,choices=c(names(table(JAD$IssueArea))))))})
     } else if(input$addFilter=="Region"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("regionFilter", "Region",multiple=TRUE,choices=c(names(table(JAD$Region))))))
+      output$regionFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("regionFilter", "Region",multiple=TRUE,choices=c(names(table(JAD$Region))))))})
     } else if(input$addFilter=="Material"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("materialFilter","Material",multiple=TRUE,choices=c("Yes","No"))))
+      output$materialFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("materialFilter","Material",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Methodology"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("methodFilter", "Methodology",multiple=TRUE,choices=c(names(table(JAD$Methodology))))))
+      output$methodFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("methodFilter", "Methodology",multiple=TRUE,choices=c(names(table(JAD$Methodology))))))})
     } else if(input$addFilter=="Time Period"){
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c(names(table(JAD$TimePeriod))))))
+      output$timeFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c(names(table(JAD$TimePeriod))))))})
     } else if(input$addFilter=="Substantive Focus"){ 
-      insertUI(
-        selector="#newFilter",
-        where="afterEnd",
-        ui=tags$div(selectInput("focusFilter", "Substantive Focus",multiple=TRUE,choices=c(names(table(JAD$Focus))))))
+      output$focusFilter<-renderUI({
+        tagList(
+        ui=tags$div(selectInput("focusFilter", "Substantive Focus",multiple=TRUE,choices=c(names(table(JAD$Focus))))))})
     }
   })
   
