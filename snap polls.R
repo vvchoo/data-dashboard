@@ -12,8 +12,9 @@ names(fac17)<-tolower(names(fac17))
 Qs<-read.csv("TRIP_FS2017_US_SnapPoll_Listofquestions.csv",stringsAsFactors=FALSE)
 Qs<-Qs[-3]
 Qs$Question<-tolower(Qs$Question)
-#i<-grep(paste0(Qs$Question,collapse="|"),names(fac17))
-#snap_10<-fac17[i]
+i<-grep(paste0(Qs$Question,collapse="|"),names(fac17))
+snap_10<-fac17[i]
+#names(snap_10)[names(snap_10) %in% Qs$Question]<-Qs$Question_text
 
 #write.csv(snap_10,"TRIP_SnapPoll10_1.0.0.csv",fileEncoding="UTF-8")
 
