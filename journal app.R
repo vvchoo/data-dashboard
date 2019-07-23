@@ -57,19 +57,20 @@ ui <- fluidPage(
            wellPanel(
              tags$div(id="yearFilter",
                       h4("Show by:"),
-             radioButtons("percentInput","Frequency or Percentage",choices=c("Frequency","Percentage")),
-             radioButtons("ygInput","Year or Variable",c("Year","Variable")))),
+             radioButtons("percentInput","Frequency or Percentage",choices=c("Frequency","Percentage"),inline=TRUE),
+             radioButtons("ygInput","Year or Variable",c("Year","Variable"),inline=TRUE))),
            wellPanel(
              tags$div(id="newFilter",
                       h4("See all articles which are:"),
                       selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")),
                       uiOutput("epistFilter"),uiOutput("contempFilter"),uiOutput("focusFilter"),uiOutput("ideaFilter"),uiOutput("issueFilter"),uiOutput("levelFilter"),uiOutput("materialFilter"),uiOutput("methodFilter"),uiOutput("paradigmFilter"),uiOutput("policyFilter"),uiOutput("regionFilter"),uiOutput("timeFilter"))),
            wellPanel(
-             h4("Article year range"),
+             h4("Article year range:"),
              sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep=""))), #change when updated),
     column(8,verticalLayout(
              plotlyOutput("plotly"),fluid=TRUE))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
+
 
 
 #######################################################################################
@@ -143,7 +144,6 @@ server <- function(input, output, session) {
   })
   
   #### create filtered data set ####
-  allfilters<-c("hello","world")
   filtered<-reactive({
     data<-JAD
     
@@ -225,4 +225,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui = ui, server = server)
-
