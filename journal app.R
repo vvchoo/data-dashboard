@@ -41,6 +41,8 @@ JAD <- JAD %>%
 
 JAD$TimePeriod <- factor(JAD$TimePeriod, levels=c("Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period"))
 
+JAD$Level<-factor(JAD$Level,levels=c("Level one","Level two","Level three","No level"))
+
 ## set up plot theme ##
 plot_theme<-theme_bw() +
   theme(axis.text.x=element_text(angle=50), axis.title.x=element_text(vjust=1.5),axis.title.y=element_text(hjust=1.5))
