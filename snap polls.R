@@ -10,10 +10,9 @@ setwd("C:/Users/Vera/Desktop/TRIP/WEB/SNAP POLLS")
 fac17<-read.csv("TRIP_FacultySurvey_2017_Intl_Clean_1.1.csv",stringsAsFactor=FALSE)
 names(fac17)<-tolower(names(fac17))
 Qs<-read.csv("TRIP_FS2017_US_SnapPoll_Listofquestions.csv",stringsAsFactors=FALSE)
-Qs<-Qs[-3]
 Qs$Question<-tolower(Qs$Question)
 i<-grep(paste0(Qs$Question,collapse="|"),names(fac17))
-snap_10<-fac17[i]
+snap_10<-cbind(fac17[3],fac17[i])
 #names(snap_10)[names(snap_10) %in% Qs$Question]<-Qs$Question_text
 
 #write.csv(snap_10,"TRIP_SnapPoll10_1.0.0.csv",fileEncoding="UTF-8")
@@ -43,7 +42,10 @@ ui <- fluidPage(
                                                               "Snap Poll VIII"="snap_8",
                                                               "Snap Poll IX"="snap_9",
                                                               "Snap Poll X"="snap_10"))),
-    mainPanel(plotOutput("graph"),tableOutput("questions"))),
+    mainPanel(
+      tabsetPanel(type="tabs",
+                  tabPanel("Questions",tableOutput("questions")),
+                  tabPanel("Graph",plotOutput("graph"))))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")
 )
 
@@ -64,7 +66,7 @@ server <- function(input, output, session) {
   })
   ## list of questions ##
   output$questions<-renderTable({
-    head(get(input$dataSelect))
+    head(get(input$dataSelect))[1:5]
   })
 }
 
