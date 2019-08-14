@@ -4,6 +4,7 @@ library(tidyr)
 library(ggplot2)
 library(plotly)
 library(rsconnect)
+#rsconnect::setAccountInfo(name='vvchoo', token='20318BE8E51FD829619E1D7095A496CB', secret='VUQ9WQai6Vt1CftmuLpcaxg5j3pHNgYReyWhCGZK')
 JAD<-read.csv("https://www.dropbox.com/s/1w5wlmur5x3x7gq/TRIP_JAD_1980_2017.csv?dl=1",stringsAsFactors=FALSE,row.names=NULL)
 
 ## reorder variables ##
