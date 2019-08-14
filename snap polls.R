@@ -28,9 +28,8 @@ for(i in 1:10){
 #######################################################
 #                   USER INTERFACE                    #
 #######################################################
-ui <- fluidPage(
-  titlePanel("Snap Poll (testing ver.)"),
-  sidebarLayout(
+ui <- navbarPage("Snap Poll (testing ver.)",
+  tabPanel("Questions",
     sidebarPanel(
       radioButtons("dataSelect","Choose snap poll..",choices=c("Snap Poll I: Syria, Ukraine, and the U.S. Defense Budget"="snap_1",
                                                     "Snap Poll II: Ukraine, Energy, and the Middle East"="snap_2",
@@ -42,10 +41,11 @@ ui <- fluidPage(
                                                     "Snap Poll VIII: 2016 Presidential Campaign, Zika, and Terrorism in the Middle East"="snap_8",
                                                     "Snap Poll IX: U.S. Foreign Policy and the 2016 Presidential Election"="snap_9",
                                                     "Snap Poll X (Embedded in 2017 Faculty Survey)"="snap_10"))), # updates go here
-    mainPanel(
-      tabsetPanel(type="tabs",
-                  tabPanel("Questions",tableOutput("questions")),
-                  tabPanel("Graph",plotOutput("graph"))))),
+    mainPanel("Questions",tableOutput("questions"))),
+  tabPanel("Graph",
+    sidebarPanel(
+      selectInput("test","test",c(1:10))),
+    mainPanel("Graph",plotOutput("graph"))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")
 )
 
@@ -67,9 +67,9 @@ server <- function(input, output, session) {
   ## list of questions ##
   output$questions<-renderTable({
     head(get(input$dataSelect))[1:5]
-    #head(Qs$Question_text)[1:5]
+    head(Qs$Question_text)[1:5]
   })
 }
 
-shinyApp(ui = ui, server = server)
 
+shinyApp(ui = ui, server = server)
