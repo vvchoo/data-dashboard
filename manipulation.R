@@ -29,18 +29,25 @@ for(i in 2:35){
 }
 
 # test ggplot #
-
 fac17 %>% drop_na(Q89) %>%
   ggplot(aes(Q89)) +
   geom_bar(stat="count") +
   theme_bw() +
   theme(axis.text.x=element_text(angle=45,hjust=1))
 
+qid_overtime<-read.csv("FacultySurvey_QIDovertime.csv",stringsAsFactors=FALSE)
+names(qid_overtime)
+qid_overtime<-qid_overtime[,2:9]
+qid_2004<-qid_overtime[,1:3] %>% filter(X2004!="")
+qid_2006<-qid_overtime[,c(1,2,4)] %>% filter(X2006!="")
+qid_2008<-qid_overtime[,c(1,2,5)] %>% filter(X2008!="")
+qid_2011<-qid_overtime[,c(1,2,6)] %>% filter(X2011!="")
+qid_2014<-qid_overtime[,c(1,2,7)] %>% filter(X2014!="")
+qid_2017<-qid_overtime[,c(1,2,8)] %>% filter(X2017!="")
+qid_questions<-qid_overtime[,1]
 
-
-
-
-
+qid_list<-list("qid_2004"=qid_2004,"qid_2006"=qid_2006,"qid_2008"=qid_2008,"qid_2011"=qid_2011,"qid_2014"=qid_2014,"qid_2017"=qid_2017,"qid_questions"=qid_questions)
+lapply(1:length(qid_list), function(i) write.csv(qid_list[[i]], file = paste0(names(qid_list[i]), ".csv"), row.names = FALSE))
 
 
 
