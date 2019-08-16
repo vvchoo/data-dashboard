@@ -31,7 +31,7 @@ for(i in 1:10){
 ui <- navbarPage("Snap Poll (testing ver.)",
   tabPanel("Questions",
     sidebarPanel(
-      radioButtons("dataSelect","Choose snap poll..",choices=c("Snap Poll I: Syria, Ukraine, and the U.S. Defense Budget"="snap_1",
+      radioButtons("dataSelect","Choose Snap Poll:",choices=c("Snap Poll I: Syria, Ukraine, and the U.S. Defense Budget"="snap_1",
                                                     "Snap Poll II: Ukraine, Energy, and the Middle East"="snap_2",
                                                     "Snap Poll III: Seven Questions on Current Global Issues for IR Scholars"="snap_3",
                                                     "Snap Poll IV: Ten Questions on Current Global Issues for IR Scholars"="snap_4",
@@ -41,7 +41,7 @@ ui <- navbarPage("Snap Poll (testing ver.)",
                                                     "Snap Poll VIII: 2016 Presidential Campaign, Zika, and Terrorism in the Middle East"="snap_8",
                                                     "Snap Poll IX: U.S. Foreign Policy and the 2016 Presidential Election"="snap_9",
                                                     "Snap Poll X (Embedded in 2017 Faculty Survey)"="snap_10"))), # updates go here
-    mainPanel("Questions",tableOutput("questions"))),
+    mainPanel("Questions",dataTableOutput("questions"))),
   tabPanel("Graph",
     sidebarPanel(
       selectInput("test","test",c(1:10))),
@@ -54,8 +54,6 @@ ui <- navbarPage("Snap Poll (testing ver.)",
 #######################################################
 server <- function(input, output, session) {
   observeEvent(input$dataSelect, {
-    if(input$dataSelect=="Select..."){
-    }
   })
   ## create graph ##
   output$graph<-renderPlot({
@@ -65,11 +63,13 @@ server <- function(input, output, session) {
        theme_bw()
   })
   ## list of questions ##
-  output$questions<-renderTable({
-    head(get(input$dataSelect))[1:5]
-    head(Qs$Question_text)[1:5]
+  output$questions<-renderDataTable({
+    df<-data.frame(Questions=Qs$Question_text,
+               buttons=actionButton("inputtest", "Visualize"))
+    df()
   })
 }
 
 
 shinyApp(ui = ui, server = server)
+
