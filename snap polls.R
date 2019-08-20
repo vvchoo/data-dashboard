@@ -18,7 +18,7 @@ snap_10<-cbind(fac17[3],fac17[i])
 write.csv(snap_10,"TRIP_SnapPoll10_1.0.0.csv",fileEncoding="UTF-8")
 
 ###### read in snap polls ########
-### should read in individually, as needed ###
+### should read in individually, as needed ???? ###
 i<-1
 for(i in 1:10){
   assign(paste("snap",i,sep="_"),read.csv(paste("TRIP_SnapPoll",i,"_1.0.0.csv",sep=""),stringsAsFactors=FALSE))
@@ -41,7 +41,7 @@ ui <- navbarPage("Snap Poll (testing ver.)",
                                                     "Snap Poll VIII: 2016 Presidential Campaign, Zika, and Terrorism in the Middle East"="snap_8",
                                                     "Snap Poll IX: U.S. Foreign Policy and the 2016 Presidential Election"="snap_9",
                                                     "Snap Poll X (Embedded in 2017 Faculty Survey)"="snap_10"))), # updates go here
-    mainPanel("Questions",dataTableOutput("questions"))),
+    mainPanel("Questions",tableOutput("questions"))),
   tabPanel("Graph",
     sidebarPanel(
       selectInput("test","test",c(1:10))),
@@ -54,6 +54,7 @@ ui <- navbarPage("Snap Poll (testing ver.)",
 #######################################################
 server <- function(input, output, session) {
   observeEvent(input$dataSelect, {
+    
   })
   ## create graph ##
   output$graph<-renderPlot({
@@ -63,10 +64,8 @@ server <- function(input, output, session) {
        theme_bw()
   })
   ## list of questions ##
-  output$questions<-renderDataTable({
-    df<-data.frame(Questions=Qs$Question_text,
-               buttons=actionButton("inputtest", "Visualize"))
-    df()
+  output$questions<-renderTable({
+    names(get(input$dataSelect))
   })
 }
 
