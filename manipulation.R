@@ -27,7 +27,7 @@ qid_2008<-qid_overtime[,c(1,2,5)] %>% filter(X2008!="")
 qid_2011<-qid_overtime[,c(1,2,6)] %>% filter(X2011!="")
 qid_2014<-qid_overtime[,c(1,2,7)] %>% filter(X2014!="")
 qid_2017<-qid_overtime[,c(1,2,8)] %>% filter(X2017!="")
-qid_questions<-qid_overtime[,1]
+qid_questions<-data.frame(qid_overtime[,1])
 
 qid_list<-list("qid_2004"=qid_2004,"qid_2006"=qid_2006,"qid_2008"=qid_2008,"qid_2011"=qid_2011,"qid_2014"=qid_2014,"qid_2017"=qid_2017,"qid_questions"=qid_questions)
 #lapply(1:length(qid_list), function(i) write.csv(qid_list[[i]], file = paste0(names(qid_list[i]), ".csv"), row.names = FALSE))
