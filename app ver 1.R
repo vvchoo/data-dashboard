@@ -1,7 +1,7 @@
 #######################################################
 #                   USER INTERFACE                    #
 #######################################################
-ui <- navbarPage("Snap Poll (testing ver.)",
+ui <- navbarPage("Faculty Survey (testing ver.)",
                  tabPanel("Questions",
                           sidebarPanel(
                             selectInput("dataSelect","Choose Survey Year:",choices=c("2004 Faculty Survey"="qid_2004","2006 Faculty Survey"="qid_2006","2008 Faculty Survey"="qid_2008","2011 Faculty Survey"="qid_2011","2014 Faculty Survey"="qid_2014","2017 Faculty Survey"="qid_2017","All years (selected questions)"="qid_questions"))), # updates go here
@@ -38,11 +38,20 @@ server <- function(input, output, session) {
   })
   ## list of questions ##
   output$questions<-renderUI({
-    lapply(1:10, function(x) fluidRow(actionLink(paste0(x),get(input$dataSelect)[[1]][x])))
+    lapply(1:10, function(x) fluidRow(actionLink(paste0("btn_",x),get(input$dataSelect)[[1]][x])))
   })
   
-  #listen<-reactive()
-  output$test<-renderText({names(input)})
+  text<-reactiveValues(test = "Hello")
+  
+  observe({
+    input_btn<-paste0("btn_", 1:10)
+    lapply(input_btn, function(x) observeEvent(input[[x]],{
+                                    i <- as.numeric(sub("btn_", "", x))
+                                    text$test <- i}))
+  })
+  
+  output$test<-renderText({print(text$test)})
+
 }
 
 
