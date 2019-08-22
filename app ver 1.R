@@ -13,6 +13,7 @@ ui <- fluidPage(
                           sidebarPanel(
                             selectInput("dataSelect","Choose Survey Year:",choices=c("2004 Faculty Survey"="qid_2004","2006 Faculty Survey"="qid_2006","2008 Faculty Survey"="qid_2008","2011 Faculty Survey"="qid_2011","2014 Faculty Survey"="qid_2014","2017 Faculty Survey"="qid_2017","All years (selected questions)"="qid_questions"))), # updates go here
                           mainPanel("Questions",uiOutput("questions"),textOutput("test"))),
+                 tabPanel("tester",br(),sidebarPanel("AYYY")),
                  tabPanel("Graph",
                           br(),
                           sidebarPanel(
@@ -45,6 +46,10 @@ server <- function(input, output, session) {
       theme_bw()
   })
   
+  ## return to questions list ##
+  observeEvent(input$return, {
+    updateTabsetPanel(session,"Questions","Questions")
+  })
   
   ## list of questions ##
   output$questions<-renderUI({
@@ -54,10 +59,6 @@ server <- function(input, output, session) {
   text<-reactiveValues(test = "Hello")
   tbgraph<-reactiveValues(test=NULL)
   
-  observeEvent(input$return, {
-    updateTabsetPanel(session,"Graph","Questions")
-  })
-  
   observe({
     input_btn<-paste0("btn_", 1:10)
     lapply(input_btn, function(x) observeEvent(input[[x]],{
@@ -66,12 +67,7 @@ server <- function(input, output, session) {
                                     tbgraph$test<-qid_2004[as.numeric(text$test),3]
                                     updateTabsetPanel(session, "Questions","Graph")}))
   })
-
-  
-  output$test<-renderText({(text$test)})
-
 }
 
 
 shinyApp(ui, server)
-
