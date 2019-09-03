@@ -36,12 +36,12 @@ server <- function(input, output, session) {
   
   ## list of questions ##
   output$questions<-renderUI({
-    lapply(1:10, function(x) fluidRow(actionLink(paste0("btn_",x),qid()[,1][x]), br()))
+    lapply(1:nrow(qid_overtime[qid_overtime[4]!="",]), function(x) fluidRow(actionLink(paste0("btn_",x),qid()[,1][x]), br()))
   })
   
   dataStore<-reactiveValues(dataLoc=NULL,dataNum=NULL)
   observe({
-    input_btn<-paste0("btn_", 1:10)
+    input_btn<-paste0("btn_", 1:nrow(qid_overtime[qid_overtime[4]!="",]))
     lapply(input_btn, function(x) observeEvent(input[[x]],{
       i <- as.numeric(sub("btn_", "", x))
       dataStore$dataNum <- i
