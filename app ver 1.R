@@ -17,7 +17,7 @@ ui <- fluidPage(
                           br(),
                           sidebarPanel(
                             selectInput("dataSelect","Choose Survey Year:",choices=c("2004 Faculty Survey"=3,"2006 Faculty Survey"=4,"2008 Faculty Survey"=5,"2011 Faculty Survey"=6,"2014 Faculty Survey"=7,"2017 Faculty Survey"=8,"All years (selected questions)"=1))), # updates go here
-                          mainPanel(uiOutput("questions"),textOutput("print"))),
+                          mainPanel(uiOutput("questions"),tableOutput("print"))),
                  tabPanel("Graph",
                           fluidRow(column(9,
                             strong(h3(textOutput("selectedQ"))),
@@ -53,24 +53,28 @@ server <- function(input, output, session) {
       updateTabsetPanel(session, "Questions","Graph")}))
   })
   
-  output$print<-renderText({table(df()[[1]])})
+  output$print<-renderText({str(dataStore$dataLoc)
+    length(dataStore$dataLoc)
+    table(df()[[1]])})
   
   
   
   new_df<-function(x){
-    list<-grep(paste(dataStore$dataLoc,collapse="|"),names(new_surveys[[x]]))
-    ifelse(length(dataStore$dataLoc)==1,df<-data.frame(new_surveys[[x]] %>% select(dataStore$dataLoc[[1]])),
-    ifelse(length(dataStore$dataLoc)==2,df<-data.frame(new_surveys[[x]] %>% select(dataStore$dataLoc[[1]]:dataStore$dataLoc[[2]]) %>%
-                                               gather(var,var_value,dataStore$dataLoc[[1]]:dataStore$dataLoc[[2]]) %>% select(var_value))))
+    y <- ifelse(length(dataStore$dataLoc[[1]])==1,
+           data.frame(new_surveys[[x]] %>% select(dataStore$dataLoc[[1]][1])),
+           data.frame(new_surveys[[x]] %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
+                                               gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
+                                               select(value)))
+    return(y)
   }
 
   
-  df<-reactive({data.frame(ifelse(input$dataSelect==3, df<-new_df(1),
-                           ifelse(input$dataSelect==4, df<-new_df(2),
-                           ifelse(input$dataSelect==5, df<-new_df(3),
-                           ifelse(input$dataSelect==6, df<-new_df(4),
-                           ifelse(input$dataSelect==7, df<-new_df(5),
-                           ifelse(input$dataSelect==8, df<-new_df(6))))))))
+  df<-reactive({data.frame(ifelse(input$dataSelect==3, new_df(1),
+                           ifelse(input$dataSelect==4, new_df(2),
+                           ifelse(input$dataSelect==5, new_df(3),
+                           ifelse(input$dataSelect==6, new_df(4),
+                           ifelse(input$dataSelect==7, new_df(5),
+                           ifelse(input$dataSelect==8, new_df(6))))))))
   })
 
 
