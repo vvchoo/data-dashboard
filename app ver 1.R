@@ -41,11 +41,11 @@ server <- function(input, output, session) {
   
   ## list of questions ##
   output$questions<-renderUI({
-    lapply(1:nrow(qid_overtime[qid_overtime[4]!="",]), function(x) fluidRow(actionLink(paste0("btn_",x),qid()[,1][x]), br()))
+    lapply(1:nrow(qid()), function(x) fluidRow(actionLink(paste0("btn_",x),qid()[,1][x]), br()))
   })
 
   observe({
-    input_btn<-paste0("btn_", 1:nrow(qid_overtime[qid_overtime[4]!="",]))
+    input_btn<-paste0("btn_", 1:nrow(qid()))
     lapply(input_btn, function(x) observeEvent(input[[x]],{
       i <- as.numeric(sub("btn_", "", x))
       dataStore$dataNum <- i
@@ -53,9 +53,7 @@ server <- function(input, output, session) {
       updateTabsetPanel(session, "Questions","Graph")}))
   })
   
-  output$print<-renderText({str(dataStore$dataLoc)
-    length(dataStore$dataLoc)
-    table(df()[[1]])})
+  output$print<-renderTable({})
   
   
   
