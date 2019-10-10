@@ -7,12 +7,12 @@ library(rsconnect)
 
 rsconnect::setAccountInfo(name='vvchoo', token='20318BE8E51FD829619E1D7095A496CB', secret='VUQ9WQai6Vt1CftmuLpcaxg5j3pHNgYReyWhCGZK')
 
-fac04<-read.csv("https://www.dropbox.com/s/tudi2d3iwqk9y5l/FS2004.csv?dl=1",stringsAsFactors=TRUE,na.strings=c("","NA","NULL"))
-fac06<-read.csv("https://www.dropbox.com/s/zdxwjwm3ktvzfpp/FS2006.csv?dl=1",stringsAsFactors=TRUE,na.strings=c("","NA","NULL"))
-fac08<-read.csv("https://www.dropbox.com/s/ik9r88zo3vmmqcw/FS2008.csv?dl=1",stringsAsFactors=TRUE,na.strings=c("","NA","NULL"))
-fac11<-read.csv("https://www.dropbox.com/s/08csc715oxph87v/FS2011.csv?dl=1",stringsAsFactors=TRUE,na.strings=c("","NA","NULL"))
-fac14<-read.csv("https://www.dropbox.com/s/4376y8l392vp2wm/FS2014.csv?dl=1",stringsAsFactors=TRUE,na.strings=c("","NA","NULL"))
-fac17<-read.csv("https://www.dropbox.com/s/32a1cf6grn10zyi/FS2017.csv?dl=1",stringsAsFactors=TRUE,encoding="UTF-8",na.strings=c("","NA","NULL"))
+fac04<-readRDS(url("https://www.dropbox.com/s/re2y7xs78y8091k/fac04.rds?dl=1"))
+fac06<-readRDS(url("https://www.dropbox.com/s/fb4u9fa59n48qpr/fac06.rds?dl=1"))
+fac08<-readRDS(url("https://www.dropbox.com/s/r1jhp65mvxgnmpt/fac08.rds?dl=1"))
+fac11<-readRDS(url("https://www.dropbox.com/s/ajuy8bixg3aqm4b/fac11.rds?dl=1"))
+fac14<-readRDS(url("https://www.dropbox.com/s/skwh71zqxzjt5iv/fac14.rds?dl=1"))
+fac17<-readRDS(url("https://www.dropbox.com/s/d92a52h87ifhbxp/fac17.rds?dl=1"))
 
 # create codebook #
 qid_overtime<-read.csv("https://www.dropbox.com/s/uu5n4n8q96u32sd/FacultySurvey_QIDovertime.csv?dl=1",stringsAsFactors=FALSE,na.strings=c("","NA"))
@@ -20,15 +20,6 @@ qid_overtime$Question_text<-gsub("\n"," ",qid_overtime$Question_text)
 qid_overtime$Question_text<-trimws(qid_overtime$Question_text)
 qid_overtime<-qid_overtime[,c(2,4:9)]
 qid_all<-qid_overtime[,c(1:7)][!is.na(qid_overtime$X2004) & !is.na(qid_overtime$X2006) & !is.na(qid_overtime$X2008) & !is.na(qid_overtime$X2011) & !is.na(qid_overtime$X2014) & !is.na(qid_overtime$X2017),]
-#qid_2004<-qid_overtime[,c(1:2)] %>% filter(2004!="")
-#qid_2006<-qid_overtime[,c(1,3)] %>% filter(2006!="")
-#qid_2008<-qid_overtime[,c(1,4)] %>% filter(2008!="")
-#qid_2011<-qid_overtime[,c(1,5)] %>% filter(2011!="")
-#qid_2014<-qid_overtime[,c(1,6)] %>% filter(2014!="")
-#qid_2017<-qid_overtime[,c(1,7)] %>% filter(2017!="")
-#qid_questions<-data.frame(qid_overtime[,1])
-
-#qid_list<-list("qid_all"=qid_all, "qid_2004"=qid_2004,"qid_2006"=qid_2006,"qid_2008"=qid_2008,"qid_2011"=qid_2011,"qid_2014"=qid_2014,"qid_2017"=qid_2017,"qid_questions"=qid_questions)
 
 new_surveys<-list("FS2004"=fac04,"FS2006"=fac06,"FS2008"=fac08,"FS2011"=fac11,"FS2014"=fac14,"FS2017"=fac17)
 
@@ -46,6 +37,7 @@ ui <- fluidPage(
                         margin-top:-12px;
                         display:block;
                         background-color:#e1eaf0;
+                        transition: background-color .3s, color .3s;
                         border-radius:5px;
                     }
                     .action-button:hover{
@@ -56,9 +48,19 @@ ui <- fluidPage(
                     .well{
                         background-color:#e1eaf0;
                     }
+                    #return{
+                        background-color:#f2f9fc;
+                        transition: background-color .3s, color .3s;
+                        border-color:#ffffff;
+                        width:100%;
+                    }
+                    #return:hover{
+                        background-color:#fafdff;
+                        transition: background-color .3s, color .3s;
+                    }
                     "))
   ),
-  titlePanel("Faculty Survey"),
+  titlePanel(h1(strong("Faculty Survey"))),
     tabsetPanel(id="Questions",
                  tabPanel("Questions",
                           br(),
@@ -75,8 +77,9 @@ ui <- fluidPage(
                                 actionButton("return","Return to question list"))),
                           column(8,
                                  textOutput("error"),
-                                 plotOutput("graph")))),
-  tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")))
+                                 uiOutput("noGraph"),
+                                 plotlyOutput("graph"))))),
+  tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
 
 #######################################################
 #                       SERVER                        #
@@ -93,7 +96,7 @@ server <- function(input, output, session) {
   countryFilter<-reactive({
     if(input$countries=="All Countries"){
       countryFilter<-c(names(table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)[table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)!=0]))
-    } else{
+    } else {
       countryFilter<-as.character(input$countries)
     }
     countryFilter
@@ -119,11 +122,11 @@ server <- function(input, output, session) {
     lapply(input_btn, function(x) observeEvent(input[[x]],{
       i <- as.numeric(sub("btn_", "", x))
       dataStore$dataNum <- i
-      dataStore$dataLoc<-strsplit(qid()[as.numeric(dataStore$dataNum),2],":")
+      if(length(qid())==2){dataStore$dataLoc<-strsplit(qid()[as.numeric(dataStore$dataNum),2],":")}
+      if(length(qid())!=2){lapply(2:7, function(x) dataStore$dataLoc[[x-1]]<-strsplit(qid()[as.numeric(dataStore$dataNum),x],":"))}
       updateTabsetPanel(session, "Questions", "Graph")
       }))
   })
-  
   
   ## construct dataframe ##
   new_df<-function(x){
@@ -135,30 +138,50 @@ server <- function(input, output, session) {
     return(y)
   }
   
-  df<-reactive({df<-data.frame(ifelse(input$dataSelect==2, new_df(1),
-                           ifelse(input$dataSelect==3, new_df(2),
-                           ifelse(input$dataSelect==4, new_df(3),
-                           ifelse(input$dataSelect==5, new_df(4),
-                           ifelse(input$dataSelect==6, new_df(5),
-                           ifelse(input$dataSelect==7, new_df(6),
-                           ifelse(input$dataSelect==1, cbind(new_df(1),new_df(2),new_df(3),new_df(4),new_df(5),new_df(6))))))))),stringsAsFactors=TRUE,na.strings="")
+  new_df_all<-function(x){
+    y <- ifelse(length(dataStore$dataLoc[[x]])==1,
+                data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[x]][1])) %>% drop_na(),
+                data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[x]][1]:dataStore$dataLoc[[x]][2]) %>%
+                             gather(key,value,dataStore$dataLoc[[x]][1]:dataStore$dataLoc[[x]][2]) %>%
+                             select(value)) %>% drop_na())
+    return(y)
+  }
+  
+  df<-reactive({
+    df<-data.frame(ifelse(input$dataSelect==2, new_df(1),
+                   ifelse(input$dataSelect==3, new_df(2),
+                   ifelse(input$dataSelect==4, new_df(3),
+                   ifelse(input$dataSelect==5, new_df(4),
+                   ifelse(input$dataSelect==6, new_df(5),
+                   ifelse(input$dataSelect==7, new_df(6),
+                   ifelse(input$dataSelect==1, 
+                          cbind(new_df_all(1),new_df_all(2),new_df_all(3),new_df_all(4),new_df_all(5),new_df_all(6))))))))),
+                   stringsAsFactors=TRUE)
    df
   })
-  
-  output$print<-renderTable({})
 
-  ######################  G R A P H ######################
+  ###################### G R A P H ######################
   ## create graph ##
-    output$graph<-renderPlot({
-      ggplot(data=df(),aes_string(x=df()[[1]])) +
-        geom_bar(stat="count",fill="#ffbfd7") +
-        scale_x_discrete(drop=FALSE) +
-        geom_text(stat="count",aes(label=..count..),vjust=-.5) +
-        plot_theme
-    }, res=100)
+    output$graph<-renderPlotly({
+      if(nrow(df()!=0)){
+        p<-ggplot(data=df(),aes_string(x=df()[[1]], text=df()[[1]])) +
+          geom_bar(stat="count",fill="#abcad4") +
+          scale_x_discrete(drop=FALSE) +
+          geom_text(stat="count",aes(label=..count..),vjust=-.5) +
+          plot_theme
+        ggplotly(p,tooltip="text")
+      }
+    })
+    output$noGraph<-renderUI({
+      if(nrow(df())==0){h4(strong("The selected question was not asked in this country."))}
+    })
   
   ## print error ##
   output$error<-renderText({
+    print(qid())
+    print(dataStore$dataNum)
+    print(dataStore$dataLoc)
+    print(head(df()))
     print(str(df()))
   })
     
