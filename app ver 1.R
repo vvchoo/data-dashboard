@@ -2,6 +2,7 @@ library(shiny)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(ggpubr)
 library(plotly)
 library(rsconnect)
 
@@ -15,14 +16,11 @@ fac14<-readRDS(url("https://www.dropbox.com/s/skwh71zqxzjt5iv/fac14.rds?dl=1"))
 fac17<-readRDS(url("https://www.dropbox.com/s/d92a52h87ifhbxp/fac17.rds?dl=1"))
 
 # create codebook #
-qid_overtime<-read.csv("https://www.dropbox.com/s/uu5n4n8q96u32sd/FacultySurvey_QIDovertime.csv?dl=1",stringsAsFactors=FALSE,na.strings=c("","NA"))
-qid_overtime$Question_text<-gsub("\n"," ",qid_overtime$Question_text)
-qid_overtime$Question_text<-trimws(qid_overtime$Question_text)
-qid_overtime<-qid_overtime[,c(2,4:9)]
+qid_overtime<-readRDS(url("https://www.dropbox.com/s/g99hu4hn4lxx5rd/qid_overtime.rds?dl=1"))
 qid_all<-qid_overtime[,c(1:7)][!is.na(qid_overtime$X2004) & !is.na(qid_overtime$X2006) & !is.na(qid_overtime$X2008) & !is.na(qid_overtime$X2011) & !is.na(qid_overtime$X2014) & !is.na(qid_overtime$X2017),]
 
 new_surveys<-list("FS2004"=fac04,"FS2006"=fac06,"FS2008"=fac08,"FS2011"=fac11,"FS2014"=fac14,"FS2017"=fac17)
-
+new_surveys[[6]][new_surveys[[6]]=="NULL"]<-NA
 plot_theme<-theme_bw() +
   theme(axis.text.x=element_text(angle=50,vjust=1,hjust=1))
 
@@ -65,7 +63,8 @@ ui <- fluidPage(
                  tabPanel("Questions",
                           br(),
                           sidebarPanel(
-                            selectInput("dataSelect","Choose Survey Year:",choices=c("2004 Faculty Survey"=2,"2006 Faculty Survey"=3,"2008 Faculty Survey"=4,"2011 Faculty Survey"=5,"2014 Faculty Survey"=6,"2017 Faculty Survey"=7,"All years (selected questions)"=1))), # updates go here
+                            selectInput("dataSelect","Choose Survey Year:",
+                                        choices=c("2004 Faculty Survey"=2,"2006 Faculty Survey"=3,"2008 Faculty Survey"=4,"2011 Faculty Survey"=5,"2014 Faculty Survey"=6,"2017 Faculty Survey"=7,"All years (selected questions)"=1))), # updates go here
                           mainPanel(br(),uiOutput("questions"),tableOutput("print"))),
                  tabPanel("Graph",
                           fluidRow(column(9,
@@ -78,7 +77,8 @@ ui <- fluidPage(
                           column(8,
                                  textOutput("error"),
                                  uiOutput("noGraph"),
-                                 plotlyOutput("graph"))))),
+                                 plotlyOutput("graph"),
+                                 plotOutput("legend"))))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
 
 #######################################################
@@ -130,59 +130,65 @@ server <- function(input, output, session) {
   
   ## construct dataframe ##
   new_df<-function(x){
-    y <- ifelse(length(dataStore$dataLoc[[1]])==1,
-           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[1]][1])) %>% drop_na(),
+    y <- if(length(dataStore$dataLoc[[1]])==1){
+           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
+    } else {
            data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
                                                gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
-                                               select(value)) %>% drop_na())
+                                               select(response=value) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% 
+                                               group_by(response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
+    }
     return(y)
   }
   
   new_df_all<-function(x){
-    y <- ifelse(length(dataStore$dataLoc[[x]])==1,
-                data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[x]][1])) %>% drop_na(),
-                data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[x]][1]:dataStore$dataLoc[[x]][2]) %>%
-                             gather(key,value,dataStore$dataLoc[[x]][1]:dataStore$dataLoc[[x]][2]) %>%
-                             select(value)) %>% drop_na())
+    y <- if(length(dataStore$dataLoc[[x]][[1]])==1){
+                data.frame(new_surveys[[x]] %>% select(response=dataStore$dataLoc[[x]][[1]][1],year=surveyYear,surveyId=standardId) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% 
+                             group_by(year,response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
+    } else {
+                data.frame(new_surveys[[x]] %>% select(dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2],year=surveyYear,surveyId=standardId) %>%
+                             gather(key,value,dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2]) %>%
+                             select(response=value,year,surveyId) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% 
+        group_by(year,response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
+    }
     return(y)
   }
   
   df<-reactive({
-    df<-data.frame(ifelse(input$dataSelect==2, new_df(1),
-                   ifelse(input$dataSelect==3, new_df(2),
-                   ifelse(input$dataSelect==4, new_df(3),
-                   ifelse(input$dataSelect==5, new_df(4),
-                   ifelse(input$dataSelect==6, new_df(5),
-                   ifelse(input$dataSelect==7, new_df(6),
-                   ifelse(input$dataSelect==1, 
-                          cbind(new_df_all(1),new_df_all(2),new_df_all(3),new_df_all(4),new_df_all(5),new_df_all(6))))))))),
-                   stringsAsFactors=TRUE)
-   df
+    if(input$dataSelect==1){
+      df<-data.frame(rbind(new_df_all(1),new_df_all(2),new_df_all(3),new_df_all(4),new_df_all(5),new_df_all(6)),stringsAsFactors=TRUE)
+    } else{
+      df<-data.frame(if(input$dataSelect==2){new_df(1)
+                     } else if(input$dataSelect==3){new_df(2)
+                     } else if(input$dataSelect==4){new_df(3)
+                     } else if(input$dataSelect==5){new_df(4)
+                     } else if(input$dataSelect==6){new_df(5)
+                     } else if(input$dataSelect==7){new_df(6)},stringsAsFactors=TRUE)
+    }
+   return(df)
   })
 
   ###################### G R A P H ######################
   ## create graph ##
-    output$graph<-renderPlotly({
-      if(nrow(df()!=0)){
-        p<-ggplot(data=df(),aes_string(x=df()[[1]], text=df()[[1]])) +
-          geom_bar(stat="count",fill="#abcad4") +
-          scale_x_discrete(drop=FALSE) +
-          geom_text(stat="count",aes(label=..count..),vjust=-.5) +
-          plot_theme
-        ggplotly(p,tooltip="text")
-      }
-    })
-    output$noGraph<-renderUI({
-      if(nrow(df())==0){h4(strong("The selected question was not asked in this country."))}
-    })
+  p<-reactive({
+    if(nrow(df()!=0) & input$dataSelect!=1){
+      p<-plot_ly(df(), x=~response, y=~per, type="bar") %>% layout(legend=list(x=100,y=0))
+    } else if(nrow(df()!=0) & input$dataSelect==1){
+      p<-plot_ly(df(), x=~year, y=~per, color=~response, type="scatter", mode="lines",width=800,height=600) %>% 
+        layout(legend=list(xanchor="center",x=.5,y=-2),autosize=F)
+    }
+  })
+  
+  output$graph<-renderPlotly({
+    p()
+  })
+  
+  output$noGraph<-renderUI({
+    if(nrow(df())==0){h4(strong("The selected question was not asked in this country."))}
+  })
   
   ## print error ##
   output$error<-renderText({
-    print(qid())
-    print(dataStore$dataNum)
-    print(dataStore$dataLoc)
-    print(head(df()))
-    print(str(df()))
   })
     
   ## return to questions list ##
