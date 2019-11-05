@@ -185,7 +185,7 @@ server <- function(input, output, session) {
     
     ## manipulate data for plotting ##
     if(input$percentInput=="Frequency" & input$ygInput=="Variable"){
-      data<-data %>% group_by(input$varFilter) %>% mutate(filter=n_distinct(pubID)) %>% mutate(filter_n=n()) # find unique articles in x-axis #
+      data<-data %>% group_by(input$varFilter) %>% mutate(filter=n_distinct(pubID),filter_n=n()) # find unique articles in x-axis #
       data<-data %>% mutate(Count=filter/filter_n)}
     if(input$percentInput=="Frequency" & input$ygInput=="Year"){
       data_n<-data %>% group_by(year, pubID) %>% count(pubID) # create counts of pubID #
@@ -196,7 +196,7 @@ server <- function(input, output, session) {
       data<-data %>% group_by(year) %>% mutate(year_filtered=n())  # find number of all observations in a year #
       data<-data %>% mutate(Percentage=((distinct_filtered/year_filtered)/year_distinct)*100)}  # create percentages to sum for stat_summary #
     if(input$percentInput=="Percentage" & input$ygInput=="Variable"){  # varFilter percentages #     
-      data<-data %>% group_by(input$varFilter) %>% mutate(new_n=n_distinct(pubID)) %>% mutate(filter_n=n())  # find how articles in x-axis #
+      data<-data %>% group_by(input$varFilter) %>% mutate(new_n=n_distinct(pubID),filter_n=n())  # find how articles in x-axis #
       data<-data %>% ungroup() %>% mutate(filter=n_distinct(pubID))# find unique articles #
       data<-data %>% mutate(Percentage=(new_n/filter/filter_n)*100)} # create actual percentages to sum for stat_summary #
     
