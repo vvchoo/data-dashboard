@@ -9,43 +9,9 @@ library(RCurl)
 library(htmlwidgets)
 
 #rsconnect::setAccountInfo(name='vvchoo', token='20318BE8E51FD829619E1D7095A496CB', secret='VUQ9WQai6Vt1CftmuLpcaxg5j3pHNgYReyWhCGZK')
-JAD<-read.csv("https://www.dropbox.com/s/1w5wlmur5x3x7gq/TRIP_JAD_1980_2017.csv?dl=1",stringsAsFactors=TRUE,row.names=NULL)
-JAD_copy<-JAD
+JAD<-readRDS(url("https://www.dropbox.com/s/nx09f4imh6b02kg/JAD.rds?dl=1"))
+JAD_copy<-readRDS(url("https://www.dropbox.com/s/lb8zo1c5s7qmn24/JAD_original.rds?dl=1"))
 
-## reorder variables ##
-JAD<-JAD[c(1:10,23:25,36:38,11:22,26:35,39:97)]
-JAD<-JAD[-c(2,3,4,7,8,9)]
-
-#### rename variables ####
-names(JAD)<-c("pubID","journal","year","Paradigm","Ideational","Material","Epistemology","Contemporary","PolicyPrescription","IssueArea","Realism Taken Seriously","Liberalism Taken Seriously","Marxism Taken Seriously","Constructivism Taken Seriously","Non-paradigmatic Taken Seriously","Atheoretic/None Taken Seriously","Realism Synthesis","Liberalism Synthesis","Marxism Synthesis","Constructivism Synthesis","Non-paradigmatic Synthesis","No Synthesis","Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period","Level one","Level two","Level three", "No Level","Analytic/non-formal","Counterfactual","Descriptive","Experimental","Formal Modeling","Policy analysis","Qualitative","Quantitative","Antarctica","Canada/Western Europe","East Asia","FSU / Eastern Europe","Global","Latin America","Middle East / North Africa","No region","Oceania","South Asia","Southeast Asia","Subsaharan Africa","United States","Alliances","Balance of Power","Bargaining Deterrence Strategy","Development","Diplomacy","Domestic Politics","Economic Interdependence","Environment","Ethnicity/Religion","Foreign Aid","Foreign Policy","Gender","Humanitarian","Intergovernmental Organization","Interstate Crisis","Interstate War","International Law","Intrastate Conflict","Discipline of IR","International Regimes","Migration","Monetary Policy","Non-governmental Organizations","North-South Relations","Public Health","Public Opinion","Regime Type","Regional Integration","Sanctions","Terrorism","Trade","Weapons Systems","Weapons of Mass Destruction Proliferation","Other")
-
-## rewrite JAD yes/no ##
-i<-11
-for(i in 11:91){
-  JAD[i]<-ifelse(JAD[i]=="Yes",JAD[i]<-names(JAD[i]),JAD[i]<-"")
-  i<-i+1
-}
-
-#### gather data set ####
-JAD <- JAD %>% 
-  gather(TimePeriod, TimePeriod_value,`Pre-history to 476 AD`:`No time period`) %>% 
-filter(TimePeriod_value!="") %>% select(-TimePeriod_value) %>% 
-  gather(Level,Level_value,`Level one`:`No Level`) %>% 
-  filter(Level_value!="") %>% select(-Level_value) %>%
-  gather(Focus,Focus_value,`Alliances`:`Other`) %>% 
-  filter(Focus_value!="") %>% select(-Focus_value) %>%
-  gather(Seriously,Seriously_value,`Realism Taken Seriously`:`Atheoretic/None Taken Seriously`) %>% 
-  filter(Seriously_value!="") %>% select(-Seriously_value) %>%
-  gather(Synthesis,Synthesis_value,`Realism Synthesis`:`No Synthesis`) %>% 
-  filter(Synthesis_value!="") %>% select(-Synthesis_value) %>%
-  gather(Methodology,Methodology_value,`Analytic/non-formal`:`Quantitative`) %>% 
-  filter(Methodology_value!="") %>% select(-Methodology_value) %>%
-  gather(Region,Region_value,`Antarctica`:`United States`) %>% 
-  filter(Region_value!="") %>% select(-Region_value) %>%
-  select(pubID,journal,year,Paradigm,Epistemology,IssueArea,Ideational,Material,Contemporary,PolicyPrescription,TimePeriod,Level,Focus,Seriously,Synthesis,Methodology,Region)
-
-JAD$TimePeriod <- factor(JAD$TimePeriod, levels=c("Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period"))
-JAD$Level<-factor(JAD$Level,levels=c("Level one","Level two","Level three","No level"))
 
 #### set up plot theme ####
 plot_theme<-theme_bw() +
@@ -60,7 +26,6 @@ ui <- fluidPage(
     tags$style(HTML("
                     .well{
                         background-color:#e1eaf0;"
-      
     ))
   ),
   titlePanel(h1(strong("Journal Article Database")),
@@ -239,10 +204,6 @@ server <- function(input, output, session) {
   
   dash_plot<-reactive({ggplotly(plot(), height=700) %>%
       layout(margin=list(b=300,l=100),autosize=T,yaxis=list(hoverinfo="p"))})
-  temp_plot<-reactive({ggplotly(plot(), height=575,width=325) %>%
-      layout(margin=list(b=300,l=100),autosize=T,yaxis=list(hoverinfo="p"))})
-  
-  
     
   output$plotly <- renderPlotly({ 
     dash_plot()
