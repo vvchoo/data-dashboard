@@ -54,6 +54,25 @@ new_surveys<-list("FS2004"=fac04,"FS2006"=fac06,"FS2008"=fac08,"FS2011"=fac11,"F
 #lapply(1:6, function(i) write.csv(new_surveys[[i]], file = paste0(names(new_surveys[i]), ".csv"), row.names = FALSE))
 
 
+z<-data.frame(snap[[10]] %>% select(response=qg_153))
+z<-data.frame(response=unlist(strsplit(as.character(z$response), ",")))
+z<-z %>% group_by(response) %>% drop_na() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2), year=2017) %>% drop_na() %>% top_n(8,per)
+z<-rbind(z[1:8,],z[1:8,])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
