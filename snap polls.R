@@ -40,6 +40,7 @@ commas<-c("qg_153","qg_151","q4486")
 
 #### read in codebooks ####
 snap_cb<-lapply(1:11, function(x) assign(paste("snap",x,sep="_"),read.csv(paste("TRIP_SnapPoll",x,"_1.0.0_codebook.csv",sep=""),na.strings="")))
+snap_cb[[11]]<-snap_cb[[11]][1:20,]
 
 #######################################################
 #                   USER INTERFACE                    #
