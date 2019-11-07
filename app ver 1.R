@@ -17,10 +17,18 @@ fac17<-readRDS(url("https://www.dropbox.com/s/d92a52h87ifhbxp/fac17.rds?dl=1"))
 
 # create codebook #
 qid_overtime<-readRDS(url("https://www.dropbox.com/s/g99hu4hn4lxx5rd/qid_overtime.rds?dl=1"))
+qid_overtime$Question_text<-gsub("\\[ Country X \\]","RESPONDENT COUNTRY",qid_overtime$Question_text)
+qid_overtime$Question_text<-gsub("\\[ Country X\\]","RESPONDENT COUNTRY",qid_overtime$Question_text)
+qid_overtime[68,1]<-unlist(strsplit(qid_overtime[68,1], " \\[Field-qg_117]"))
 qid_all<-qid_overtime[,c(1:7)][!is.na(qid_overtime$X2004) & !is.na(qid_overtime$X2006) & !is.na(qid_overtime$X2008) & !is.na(qid_overtime$X2011) & !is.na(qid_overtime$X2014) & !is.na(qid_overtime$X2017),]
 
 new_surveys<-list("FS2004"=fac04,"FS2006"=fac06,"FS2008"=fac08,"FS2011"=fac11,"FS2014"=fac14,"FS2017"=fac17)
 new_surveys[[6]][new_surveys[[6]]=="NULL"]<-NA
+levels(new_surveys[[5]]$surveyCountry)<-(unlist(strsplit(levels(new_surveys[[5]]$surveyCountry), " 2014")))
+levels(new_surveys[[6]]$surveyCountry)<-(unlist(strsplit(levels(new_surveys[[6]]$surveyCountry), " 2017")))
+levels(new_surveys[[5]]$surveyCountry)<-unlist(strsplit(levels(new_surveys[[5]]$surveyCountry), " French"))
+levels(new_surveys[[5]]$surveyCountry)<-unlist(strsplit(levels(new_surveys[[5]]$surveyCountry), " English"))
+
 plot_theme<-theme_bw() +
   theme(axis.text.x=element_text(angle=50,vjust=1,hjust=1))
 
@@ -89,13 +97,19 @@ server <- function(input, output, session) {
   ###################### C O U N T R I E S ######################
   observeEvent(input$dataSelect, {
     output$countryList<-renderUI({
-      selectInput("countries","Choose Survey Country:",c("All Countries",names(table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)[table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)!=0])))
+      if(input$dataSelect==1){
+        selectInput("countries","Choose Survey Country:",c("United States only"="United States","All Countries"))
+      } else {
+        selectInput("countries","Choose Survey Country:",c("All Countries",names(table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)[table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)!=0])))
+      }
     })
   })
   
   countryFilter<-reactive({
-    if(input$countries=="All Countries"){
+    if(input$countries=="All Countries" & input$dataSelect!=1){
       countryFilter<-c(names(table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)[table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)!=0]))
+    } else if(input$countries=="All Countries" & input$dataSelect==1){
+      countryFilter<-c(names(table(new_surveys[[5]]$surveyCountry)[table(new_surveys[[5]]$surveyCountry)!=0]))
     } else {
       countryFilter<-as.character(input$countries)
     }
@@ -131,26 +145,24 @@ server <- function(input, output, session) {
   ## construct dataframe ##
   new_df<-function(x){
     y <- if(length(dataStore$dataLoc[[1]])==1){
-           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
+           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8)
     } else {
-           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
-                                               gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
-                                               select(response=value) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% 
-                                               group_by(response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
+           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% select(response=value) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8)
     }
     return(y)
   }
   
   new_df_all<-function(x){
-    y <- if(length(dataStore$dataLoc[[x]][[1]])==1){
-                data.frame(new_surveys[[x]] %>% select(response=dataStore$dataLoc[[x]][[1]][1],year=surveyYear,surveyId=standardId) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% 
-                             group_by(year,response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
-    } else {
-                data.frame(new_surveys[[x]] %>% select(dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2],year=surveyYear,surveyId=standardId) %>%
-                             gather(key,value,dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2]) %>%
-                             select(response=value,year,surveyId) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% 
-        group_by(year,response) %>% summarize(n=n()) %>% mutate(per=n/sum(n)*100)) %>% drop_na()
-    }
+    y <- if(length(dataStore$dataLoc[[1]])==1 && dataStore$dataLoc[[1]][1] %in% commas){ #multiselect Qs
+      z<-data.frame(new_surveys[[6]] %>% select(response=qg_153))
+      z<-data.frame(response=unlist(strsplit(as.character(z$response), ",")))
+      z<-z %>% group_by(response) %>% drop_na() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2), year=2017) %>% drop_na() %>% top_n(8,per)
+      z
+         } else if(length(dataStore$dataLoc[[x]][[1]])==1){
+                data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[x]][[1]][1],year=surveyYear,surveyId=standardId) %>% filter(!is.na(response)) %>% group_by(year,response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8,per)
+         } else {
+                data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2],year=surveyYear,surveyId=standardId) %>% gather(key,value,dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2]) %>% select(response=value,year,surveyId) %>% filter(!is.na(response)) %>% group_by(year,response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8,per)
+         }
     return(y)
   }
   
@@ -172,30 +184,25 @@ server <- function(input, output, session) {
   ## create graph ##
   p<-reactive({
     if(nrow(df()!=0) & input$dataSelect!=1){
-      p<-plot_ly(df(), x=~response, y=~per, type="bar") %>% layout(legend=list(x=100,y=0))
+      p<-plot_ly(df(), x=~response, y=~per, type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep="")) %>% layout(legend=list(x=100,y=0))
     } else if(nrow(df()!=0) & input$dataSelect==1){
-      p<-plot_ly(df(), x=~year, y=~per, color=~response, type="scatter", mode="lines",width=800,height=600) %>% 
-        layout(legend=list(xanchor="center",x=.5,y=-2),autosize=F)
+      p<-plot_ly(df(), x=~year, y=~per, color=~response, type="scatter", mode="lines",width=800,height=600,hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep="")) %>% layout(legend=list(xanchor="center",orientation='h',y=100),autosize=F)
     }
   })
-  
   output$graph<-renderPlotly({
     p()
   })
-  
   output$noGraph<-renderUI({
     if(nrow(df())==0){h4(strong("The selected question was not asked in this country."))}
   })
-  
+  #### ####
   ## print error ##
   output$error<-renderText({
   })
-    
   ## return to questions list ##
   observeEvent(input$return, {
     updateTabsetPanel(session,"Questions","Questions")
   })
-  
   ## print question as title ##
   output$selectedQ<-renderText({paste(qid()[,1][as.numeric(dataStore$dataNum)])})
   #### ####
