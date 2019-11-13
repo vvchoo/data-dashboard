@@ -34,10 +34,25 @@ levels(snap[[8]]$qg_1857_11301)<-c("Strongly disagree","Disagree","Neutral","Agr
 levels(snap[[8]]$qg_1857_11303)<-c("Strongly disagree","Disagree","Neutral","Agree","Strongly agree","Don't know")
 levels(snap[[8]]$qg_1857_11305)<-c("Strongly disagree","Disagree","Neutral","Agree","Strongly agree","Don't know")
 
-commas<-lapply(1:length(snap[[10]]), function(x) names(snap[[10]][x])[length(grep(",",snap[[10]][[x]]))!=0])
 commas<-c("qg_153","qg_151","q4486")
-#### ####
+multipart<-list("q83_1"=c("Deter nuclear attacks by another state",
+                          "Coerce states that have nuclear weapons to change their behavior",
+                          "Deter conventional attacks by another nuclear armed state",
+                          "Coerce states without nuclear weapons to change their behavior",
+                          "Deter conventional attacks by a state without nuclear weapons"),
+                "q87_1"=c("Australia","Canada","Colombia","Denmark","Germany","Hong Kong","Ireland","Israel","Italy","Japan","Jordan","Republic of Korea","Norway","Philippines","Poland","Turkey","United Kingdom"),
+                "q90_1"=c("Maintaining U.S. military superiority","Placing sanctions on other countries","Signing free trade agreements","Maintaining existing alliances","Building new alliances","International agreements","Military intervention","Participating in international organizations"),
+                "qg_1856_11288"=c("US air strikes against suspected terrorists by manned aircraft","US air strikes against suspected terrorists by drones/unmanned aircraft","Sending US trainers and special operations forces to countries where terrorists operate","Using enhanced interrogation or torture against suspected terrorists who are captured","Sending US ground troops to fight suspected terrorists abroad","Limiting the flow of migrants/refugees and increasing border controls","Blocking suspected terrorist financing"),
+                "qg_1857_11299"=c("The United States","A coalition of Middle Eastern states","NATO","The United Nations Security Council"),
+                "qg_1952_12278"=c("Hillary Clinton","Donald Trump"),
+                "qg_1944_12235"=c("South Korea","Japan","Taiwan"),
+                "qg_1943_12230"=c("South Korea","Japan","Taiwan"),
+                "qg_1942_12277"=c("Hillary Clinton","Donald Trump"),
+                "qg_1941_12276"=c("Hillary Clinton","Donald Trump"),
+                "qg_1938_12275"=c("Hillary Clinton","Donald Trump"),
+                "qg_1937_12274"=c("Hillary Clinton","Donald Trump"))
 
+#### ####
 #### read in codebooks ####
 snap_cb<-lapply(1:11, function(x) assign(paste("snap",x,sep="_"),read.csv(paste("TRIP_SnapPoll",x,"_1.0.0_codebook.csv",sep=""),na.strings="")))
 snap_cb[[11]]<-snap_cb[[11]][1:20,]
@@ -123,29 +138,38 @@ server <- function(input, output, session) {
   output$questions<-renderUI({
     lapply(1:nrow(qid()), function(x) fluidRow(actionLink(paste0("btn_",x),qid()[,2][x]), br()))
   })
-  
-  observe({
-    input_btn<-paste0("btn_", 1:nrow(qid()))
-    lapply(input_btn, function(x) observeEvent(input[[x]],{
+
+  lapply(1:55, function(x){
+    observeEvent(input[[paste0("btn_",x)]], {
       i <- as.numeric(sub("btn_", "", x))
       dataStore$dataNum <- i
-      dataStore$dataLoc<-strsplit(as.character(qid()[as.numeric(dataStore$dataNum),1]),":")
+      dataStore$dataLoc<-unlist(strsplit(as.character(qid()[as.numeric(dataStore$dataNum),1]),":"))
+      dataStore$dataLoc<-unlist(strsplit(as.character(qid()[as.numeric(dataStore$dataNum),1]),","))
       updateTabsetPanel(session, "Questions", "Graph")
-    }))
+    })
   })
   
   ## construct dataframe ##
   new_df<-function(x){
-    y <- if(length(dataStore$dataLoc[[1]])==1 && dataStore$dataLoc[[1]][1] %in% commas){ #multiselect Qs
-      z<-data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[[1]][1]))
+    y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas){ #multiselect Qs
+      z<-data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[1]))
       z<-data.frame(response=unlist(strsplit(as.character(z$response), ",")))
       z<-z %>% group_by(response) %>% drop_na() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))
       z
-    } else if(length(dataStore$dataLoc[[1]])==1){
-      data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(response)) %>% drop_na() %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
-    }  else {
-      data.frame(snap[[x]] %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
-                   gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>%
+    } else if(dataStore$dataLoc[1] %in% names(multipart)){
+      z<-data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2]))
+      len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
+      z<-lapply(1:len, function(x){
+        y<-z[x] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
+        names(y)<-c("response","n","per", "sub_question")
+        y
+      })
+      z<-do.call(rbind,z)
+    } else if(length(dataStore$dataLoc)==1){
+      data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
+    } else {
+      data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>%
+                   gather(key,value,dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>%
                    select(response=value) %>% filter(!is.na(response)) %>% drop_na() %>% mutate(total_n=n()) %>% 
                    group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
     }
@@ -160,8 +184,11 @@ server <- function(input, output, session) {
   ###################### G R A P H ######################
   ## create graph ##
   p<-reactive({
-      p<-plot_ly(df(), x=~response, y=~per, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,
-                                                                                                 '<br>Percentage: ', per,'%',sep=""))
+    if(dataStore$dataLoc[1] %in% names(multipart)){
+      p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors=colorRampPalette(brewer.pal(10,"Spectral"))(41), type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep="")) %>% layout(barmode='stack')
+    } else {
+      p<-plot_ly(df(), x=~response, y=~per, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""))
+    }
   })
   
   output$graph<-renderPlotly({
@@ -170,7 +197,7 @@ server <- function(input, output, session) {
   
   ## print error ##
   output$error<-renderText({
-    str(dataStore$dataNum)
+    str(df())
     str(dataStore$dataLoc)
   })
   
@@ -184,4 +211,6 @@ server <- function(input, output, session) {
   #### ####
 }
 
+
 shinyApp(ui, server)
+
