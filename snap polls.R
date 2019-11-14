@@ -107,7 +107,7 @@ ui <- fluidPage(
                                                "Snap Poll XI: What Experts Make of Trump's Foreign Policy"=11))), # updates go here
                        mainPanel(br(),uiOutput("questions"),tableOutput("print"))),
               tabPanel("Graph",
-                       fluidRow(column(9,
+                       fluidRow(column(12,
                                        strong(h3(textOutput("selectedQ"))),
                                        br())),
                        fluidRow(column(4,
@@ -117,7 +117,7 @@ ui <- fluidPage(
                                 column(8,
                                        textOutput("error"),
                                        uiOutput("noGraph"),
-                                       plotlyOutput("graph"),
+                                       plotlyOutput(box("graph"),height=8,width=8),
                                        plotOutput("legend"))))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
 
@@ -125,7 +125,6 @@ ui <- fluidPage(
 #                       SERVER                        #
 #######################################################
 server <- function(input, output, session) {
-  
   ###################### Q U E S T I O N S ######################
   qid<-reactive({snap_cb[[as.numeric(input$dataSelect)]]})
   
@@ -181,9 +180,9 @@ server <- function(input, output, session) {
   ## create graph ##
   p<-reactive({
     if(dataStore$dataLoc[1] %in% names(multipart)){
-      p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors=colorRampPalette(brewer.pal(10,"Spectral"))(41), type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep="")) %>% layout(barmode='stack')
+      p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors=colorRampPalette(brewer.pal(10,"Spectral"))(41), type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=800) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
     } else {
-      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""))
+      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450), tickangle=-45)
     }
   })
   
@@ -206,7 +205,6 @@ server <- function(input, output, session) {
   output$selectedQ<-renderText({paste(qid()[,2][as.numeric(dataStore$dataNum)])})
   #### ####
 }
-
 
 shinyApp(ui, server)
 
