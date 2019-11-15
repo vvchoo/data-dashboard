@@ -125,9 +125,9 @@ ui <- fluidPage(
 #                       SERVER                        #
 #######################################################
 server <- function(input, output, session) {
+  
   ###################### Q U E S T I O N S ######################
   qid<-reactive({snap_cb[[as.numeric(input$dataSelect)]]})
-  
   dataStore<-reactiveValues(dataLoc=NULL,dataNum=NULL)
   
   ## list of questions ##
@@ -146,10 +146,9 @@ server <- function(input, output, session) {
   
   ## construct dataframe ##
   new_df<-function(x){
-    y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas){ #multiselect Qs
+    y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas[,1]){ #multiselect Qs
       z<-data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[1]))
-      z<-data.frame(response=unlist(strsplit(as.character(z$response), ",")))
-      z<-z %>% group_by(response) %>% drop_na() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))
+      z<-z %>% separate(response,c(paste("response",1:commas[grep(dataStore$dataLoc[1],commas[,1]),2],sep="_")),sep=",") %>% drop_na() %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",commas[grep(dataStore$dataLoc[1],commas[,1]),2])) %>% select(-key) %>% group_by(response) %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
       z
     } else if(length(dataStore$dataLoc)==2 && dataStore$dataLoc[1] %in% names(multipart)){
       z<-data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2]))
@@ -207,4 +206,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
