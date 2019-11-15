@@ -179,7 +179,7 @@ server <- function(input, output, session) {
   ## create graph ##
   p<-reactive({
     if(dataStore$dataLoc[1] %in% names(multipart)){
-      p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors=colorRampPalette(brewer.pal(10,"Spectral"))(41), type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=800) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
+      p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=800) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
     } else {
       p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450), tickangle=-45)
     }
