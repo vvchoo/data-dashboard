@@ -35,7 +35,7 @@ levels(snap[[8]]$qg_1857_11301)<-c("Strongly disagree","Disagree","Neutral","Agr
 levels(snap[[8]]$qg_1857_11303)<-c("Strongly disagree","Disagree","Neutral","Agree","Strongly agree","Don't know")
 levels(snap[[8]]$qg_1857_11305)<-c("Strongly disagree","Disagree","Neutral","Agree","Strongly agree","Don't know")
 
-commas<-c("qg_153","qg_151","q4486","Q21")
+commas<-data.frame(commas=c("qg_153","qg_151","q4486","Q21"),length=c(3,3,3,6))
 multipart<-list("q83_1"=c("Deter nuclear attacks by another state","Coerce states that have nuclear weapons to change their behavior","Deter conventional attacks by another nuclear armed state","Coerce states without nuclear weapons to change their behavior","Deter conventional attacks by a state without nuclear weapons"),
                 "q87_1"=c("Australia","Canada","Colombia","Denmark","Germany","Hong Kong","Ireland","Israel","Italy","Japan","Jordan","Republic of Korea","Norway","Philippines","Poland","Turkey","United Kingdom"),
                 "q90_1"=c("Maintaining U.S. military superiority","Placing sanctions on other countries","Signing free trade agreements","Maintaining existing alliances","Building new alliances","International agreements","Military intervention","Participating in international organizations"),
@@ -110,14 +110,14 @@ ui <- fluidPage(
                        fluidRow(column(12,
                                        strong(h3(textOutput("selectedQ"))),
                                        br())),
-                       fluidRow(column(4,
+                       fluidRow(column(3,
                                        wellPanel(
                                          uiOutput("countryList"),br(),
                                          actionButton("return","Return to question list"))),
-                                column(8,
+                                column(9,
                                        textOutput("error"),
                                        uiOutput("noGraph"),
-                                       plotlyOutput(box("graph"),height=8,width=8),
+                                       plotlyOutput("graph"),
                                        plotOutput("legend"))))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
 
@@ -181,7 +181,7 @@ server <- function(input, output, session) {
     if(dataStore$dataLoc[1] %in% names(multipart)){
       p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=800) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
     } else {
-      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450), tickangle=-45)
+      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450))
     }
   })
   
@@ -206,3 +206,4 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
