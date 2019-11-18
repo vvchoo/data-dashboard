@@ -112,7 +112,8 @@ ui <- fluidPage(
                                        br())),
                        fluidRow(column(3,
                                        wellPanel(
-                                         uiOutput("countryList"),br(),
+                                         selectInput("crosstabList","Crosstab:",
+                                                     c("Select..."="NULL","Gender"="gender","Rank","Area of study","etc.")),br(),
                                          actionButton("return","Return to question list"))),
                                 column(9,
                                        textOutput("error"),
@@ -125,10 +126,16 @@ ui <- fluidPage(
 #                       SERVER                        #
 #######################################################
 server <- function(input, output, session) {
-  
   ###################### Q U E S T I O N S ######################
   qid<-reactive({snap_cb[[as.numeric(input$dataSelect)]]})
   dataStore<-reactiveValues(dataLoc=NULL,dataNum=NULL)
+  crosstabs<-reactive({
+    if(input$crosstabList=="NULL"){
+      crosstabs<-NULL
+    } else {
+      crosstabs<-input$crosstabList
+    }
+    })
   
   ## list of questions ##
   output$questions<-renderUI({
@@ -147,11 +154,11 @@ server <- function(input, output, session) {
   ## construct dataframe ##
   new_df<-function(x){
     y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas[,1]){ #multiselect Qs
-      z<-data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[1]))
-      z<-z %>% separate(response,c(paste("response",1:commas[grep(dataStore$dataLoc[1],commas[,1]),2],sep="_")),sep=",") %>% drop_na() %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",commas[grep(dataStore$dataLoc[1],commas[,1]),2])) %>% select(-key) %>% group_by(response) %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
+      z<-data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]))
+      z<-z %>% separate(response,c(paste("response",1:commas[grep(dataStore$dataLoc[1],commas[,1]),2],sep="_")),sep=",") %>% drop_na() %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",commas[grep(dataStore$dataLoc[1],commas[,1]),2])) %>% select(-key) %>% group_by_all() %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
       z
     } else if(length(dataStore$dataLoc)==2 && dataStore$dataLoc[1] %in% names(multipart)){
-      z<-data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2]))
+      z<-data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]))
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
       z<-lapply(1:len, function(x){
         y<-z[x] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
@@ -160,12 +167,12 @@ server <- function(input, output, session) {
       })
       z<-do.call(rbind,z)
     } else if(length(dataStore$dataLoc)==1){
-      data.frame(snap[[x]] %>% select(response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
+      data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
     } else if(length(dataStore$dataLoc)==2){
-      data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>%
+      data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>%
                    gather(key,value,dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>%
                    select(response=value) %>% filter(!is.na(response)) %>% drop_na() %>% 
-                   group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
+                   group_by_all() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
     }
     return(y)
   }
@@ -180,30 +187,27 @@ server <- function(input, output, session) {
   p<-reactive({
     if(dataStore$dataLoc[1] %in% names(multipart)){
       p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=800) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
+    } else if(!is.null(crosstabs())){
+      p<-plot_ly(df(), x=~response, y=~per, color=~get(crosstabs()), colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450))
     } else {
-      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450))
+      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800, offset=0) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450), barmode='relative')
     }
   })
-  
   output$graph<-renderPlotly({
     p()
   })
-  
   ## print error ##
   output$error<-renderText({
     str(df())
     str(dataStore$dataLoc)
   })
-  
   ## return to questions list ##
   observeEvent(input$return, {
     updateTabsetPanel(session,"Questions","Questions")
   })
-  
   ## print question as title ##
   output$selectedQ<-renderText({paste(qid()[,2][as.numeric(dataStore$dataNum)])})
   #### ####
 }
-
 shinyApp(ui, server)
 
