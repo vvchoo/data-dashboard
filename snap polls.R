@@ -158,14 +158,15 @@ server <- function(input, output, session) {
       z<-z %>% separate(response,c(paste("response",1:commas[grep(dataStore$dataLoc[1],commas[,1]),2],sep="_")),sep=",") %>% drop_na() %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",commas[grep(dataStore$dataLoc[1],commas[,1]),2])) %>% select(-key) %>% group_by_all() %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
       z
     } else if(length(dataStore$dataLoc)==2 && dataStore$dataLoc[1] %in% names(multipart)){
-      z<-data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]))
+      z<-data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2],crosstabs()))
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
       z<-lapply(1:len, function(x){
-        y<-z[x] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
-        names(y)<-c("response","n","per", "sub_question")
+        y<-z[c(3,x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
+        names(y)<-c(crosstabs(),"response","n","per", "sub_question")
         y
       })
       z<-do.call(rbind,z)
+      z
     } else if(length(dataStore$dataLoc)==1){
       data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
     } else if(length(dataStore$dataLoc)==2){
@@ -185,8 +186,13 @@ server <- function(input, output, session) {
   ###################### G R A P H ######################
   ## create graph ##
   p<-reactive({
-    if(dataStore$dataLoc[1] %in% names(multipart)){
+    if(dataStore$dataLoc[1] %in% names(multipart) & is.null(crosstabs())){
       p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=800) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
+    } else if(dataStore$dataLoc[1] %in% names(multipart) & !is.null(crosstabs())){
+      p_list_1<-df() %>% filter(sub_question==sub_q[1]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="YlOrRd",type='bar') %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[1],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE),barmode='stack')
+      p_list<-assign(paste("p",len,sep="_"), lapply(2:len, function(x) df() %>% filter(sub_question==sub_q[x]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="YlOrRd",type='bar',showlegend=FALSE) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[x],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE),barmode='stack')))
+      p_list[[len]]<-p_list_1
+      p<-subplot(p_list,shareX=TRUE,shareY=TRUE) %>% layout(showlegend=TRUE)
     } else if(!is.null(crosstabs())){
       p<-plot_ly(df(), x=~response, y=~per, color=~get(crosstabs()), colors="YlOrRd", type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep=""), height=800) %>% layout(legend=list(.08,.08),margin = list(l = 50, r = 50, t = 50, b = 450))
     } else {
@@ -209,5 +215,6 @@ server <- function(input, output, session) {
   output$selectedQ<-renderText({paste(qid()[,2][as.numeric(dataStore$dataNum)])})
   #### ####
 }
+
 shinyApp(ui, server)
 
