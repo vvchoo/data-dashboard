@@ -163,9 +163,14 @@ server <- function(input, output, session) {
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
       z<-data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2],crosstabs()))
       z<-lapply(1:len, function(x){
-        y<-z[c(3,x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
+        if(!is.null(crosstabs())){
+        y<-z[c(len+1,x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
         names(y)<-c(crosstabs(),"response","n","per", "sub_question")
-        y
+        y } else if(is.null(crosstabs())){
+          y<-z[c(x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
+          names(y)<-c("response","n","per", "sub_question")
+          y   
+        }
       })
       z<-do.call(rbind,z)
       z
@@ -190,8 +195,8 @@ server <- function(input, output, session) {
     } else if(dataStore$dataLoc[1] %in% names(multipart) && !is.null(crosstabs())){
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
       sub_q<-multipart[[grep(dataStore$dataLoc[1],names(multipart))]]
-      p_list_1<-df() %>% filter(sub_question==sub_q[1]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="YlOrRd",type='bar') %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[1],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE),barmode='stack')
-      p_list<-assign(paste("p",len,sep="_"), lapply(2:len, function(x) df() %>% filter(sub_question==sub_q[x]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="YlOrRd",type='bar',showlegend=FALSE) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[x],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE),barmode='stack')))
+      p_list_1<-df() %>% filter(sub_question==sub_q[1]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="YlOrRd",type='bar', height=800) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[1],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=350, b=0),barmode='stack')
+      p_list<-assign(paste("p",len,sep="_"), lapply(2:len, function(x) df() %>% filter(sub_question==sub_q[x]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="YlOrRd",type='bar',showlegend=FALSE, height=800) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[x],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=350, b=0),barmode='stack')))
       p_list[[len]]<-p_list_1
       p<-subplot(p_list,shareX=TRUE,shareY=TRUE) %>% layout(showlegend=TRUE)
     } else if(!is.null(crosstabs())){
