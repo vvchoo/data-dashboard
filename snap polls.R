@@ -156,7 +156,7 @@ server <- function(input, output, session) {
     y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas[,1]){ #multiselect Qs
       len<-commas[grep(dataStore$dataLoc[1],commas[,1]),2]
       z<-data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]))
-      z<-z %>% drop_na() %>% separate(response,c(paste("response",1:len,sep="_")),sep=",") %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",len)) %>% select(-key) %>% group_by_all() %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
+      z<-z %>% drop_na() %>% separate(response,c(paste("response",1:len,sep="_")),sep=",") %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",len)) %>% select(-key) %>% group_by_all() %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
       z
     } else if(length(dataStore$dataLoc)==2 && dataStore$dataLoc[1] %in% names(multipart)){
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
