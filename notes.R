@@ -1,3 +1,6 @@
+# This does XXXXX
+# Code developed by Vera Choo, with reference from: XXXX
+
 test <- JAD_ref
 test <- test %>% filter(IssueArea=="International Security") %>% group_by(Paradigm) %>% mutate(new_n=n())
 test <- rbind(test, test)
