@@ -16,11 +16,11 @@ fac14<-readRDS(url("https://www.dropbox.com/s/skwh71zqxzjt5iv/fac14.rds?dl=1"))
 fac17<-readRDS(url("https://www.dropbox.com/s/d92a52h87ifhbxp/fac17.rds?dl=1"))
 
 # create codebook #
-qid_overtime<-readRDS(url("https://www.dropbox.com/s/g99hu4hn4lxx5rd/qid_overtime.rds?dl=1"))
-qid_overtime$Question_text<-gsub("\\[ Country X \\]","RESPONDENT COUNTRY",qid_overtime$Question_text)
-qid_overtime$Question_text<-gsub("\\[ Country X\\]","RESPONDENT COUNTRY",qid_overtime$Question_text)
-qid_overtime[68,1]<-unlist(strsplit(qid_overtime[68,1], " \\[Field-qg_117]"))
-qid_all<-qid_overtime[,c(1:7)][!is.na(qid_overtime$X2004) & !is.na(qid_overtime$X2006) & !is.na(qid_overtime$X2008) & !is.na(qid_overtime$X2011) & !is.na(qid_overtime$X2014) & !is.na(qid_overtime$X2017),]
+qid_list<-lapply(1:7, function(x) assign(paste0("qid_",x), read.csv(paste0("C:/Users/Vera/Desktop/FALL 2019/TRIP/WEB/SURVEYS/qid_",x,".csv"))))
+for(x in 1:7){
+  qid_list[[x]]$Question_text<-gsub("\\[ Country X \\]","RESPONDENT COUNTRY",qid_list[[x]]$Question_text)
+  qid_list[[x]]$Question_text<-gsub("\\[ Country X\\]","RESPONDENT COUNTRY",qid_list[[x]]$Question_text)
+}
 
 new_surveys<-list("FS2004"=fac04,"FS2006"=fac06,"FS2008"=fac08,"FS2011"=fac11,"FS2014"=fac14,"FS2017"=fac17)
 new_surveys[[6]][new_surveys[[6]]=="NULL"]<-NA
@@ -28,6 +28,8 @@ levels(new_surveys[[5]]$surveyCountry)<-(unlist(strsplit(levels(new_surveys[[5]]
 levels(new_surveys[[6]]$surveyCountry)<-(unlist(strsplit(levels(new_surveys[[6]]$surveyCountry), " 2017")))
 levels(new_surveys[[5]]$surveyCountry)<-unlist(strsplit(levels(new_surveys[[5]]$surveyCountry), " French"))
 levels(new_surveys[[5]]$surveyCountry)<-unlist(strsplit(levels(new_surveys[[5]]$surveyCountry), " English"))
+
+`%notin%` <- Negate(`%in%`)
 
 plot_theme<-theme_bw() +
   theme(axis.text.x=element_text(angle=50,vjust=1,hjust=1))
@@ -72,7 +74,7 @@ ui <- fluidPage(
                           br(),
                           sidebarPanel(
                             selectInput("dataSelect","Choose Survey Year:",
-                                        choices=c("2004 Faculty Survey"=2,"2006 Faculty Survey"=3,"2008 Faculty Survey"=4,"2011 Faculty Survey"=5,"2014 Faculty Survey"=6,"2017 Faculty Survey"=7,"All years (selected questions)"=1))), # updates go here
+                                        choices=c("2004 Faculty Survey"=1,"2006 Faculty Survey"=2,"2008 Faculty Survey"=3,"2011 Faculty Survey"=4,"2014 Faculty Survey"=5,"2017 Faculty Survey"=6,"All years (selected questions)"=7))), # updates go here
                           mainPanel(br(),uiOutput("questions"),tableOutput("print"))),
                  tabPanel("Graph",
                           fluidRow(column(9,
@@ -104,7 +106,6 @@ server <- function(input, output, session) {
       }
     })
   })
-  
   countryFilter<-reactive({
     if(input$countries=="All Countries" & input$dataSelect!=1){
       countryFilter<-c(names(table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)[table(new_surveys[[as.numeric(input$dataSelect)-1]]$surveyCountry)!=0]))
@@ -117,48 +118,56 @@ server <- function(input, output, session) {
   })
   
   ###################### Q U E S T I O N S ######################
-  qid<-reactive({
-    if(input$dataSelect==1){
-      qid_all
-    } else {
-      qid_overtime[!is.na(qid_overtime[as.numeric(input$dataSelect)]),c(1,as.numeric(input$dataSelect))]
-      }
-    })
+  qid<-reactive({ qid_list[[as.numeric(input$dataSelect)]] })
   dataStore<-reactiveValues(dataLoc=NULL,dataNum=NULL)
+  crosstabs<-reactive({
+    if(input$crosstabList=="NULL"){ crosstabs<-NULL
+    } else { crosstabs<-input$crosstabList }
+  })
 
     ## list of questions ##
   output$questions<-renderUI({
     lapply(1:nrow(qid()), function(x) fluidRow(actionLink(paste0("btn_",x),qid()[,1][x]), br()))
   })
 
-  observe({
-    input_btn<-paste0("btn_", 1:nrow(qid()))
-    lapply(input_btn, function(x) observeEvent(input[[x]],{
-      i <- as.numeric(sub("btn_", "", x))
-      dataStore$dataNum <- i
-      if(length(qid())==2){dataStore$dataLoc<-strsplit(qid()[as.numeric(dataStore$dataNum),2],":")}
-      if(length(qid())!=2){lapply(2:7, function(x) dataStore$dataLoc[[x-1]]<-strsplit(qid()[as.numeric(dataStore$dataNum),x],":"))}
-      updateTabsetPanel(session, "Questions", "Graph")
-      }))
-  })
+  ## generate listeners for action buttons ##
+  if(input$dataSelect!=7){
+    lapply(1:60, function(x){
+      observeEvent(input[[paste0("btn_",x)]], {
+        i <- as.numeric(sub("btn_", "", x))
+        dataStore$dataNum <- i
+        dataStore$dataLoc<-strsplit(qid()[as.numeric(dataStore$dataNum),2],"[,:]")
+        updateTabsetPanel(session, "Questions", "Graph")
+        })
+    })
+  } else if(input$dataSelect==7){
+    lapply(1:13, function(x){
+      observeEvent(input[[paste0("btn_",x)]], {
+        i <- as.numeric(sub("btn_", "", x))
+        dataStore$dataNum <- i
+        dataStore$dataLoc<-lapply(1:6, function(x) unlist(strsplit(as.character(qid_list[[7]][as.numeric(dataStore$dataNum),x]),":")))
+        updateTabsetPanel(session, "Questions", "Graph")
+      })
+    })
+  }
   
   ## construct dataframe ##
   new_df<-function(x){
     y <- if(length(dataStore$dataLoc[[1]])==1){
-           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8)
+           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(response)) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8)
     } else {
-           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% select(response=value) %>% filter(!is.na(response)) %>% mutate(total_n=n()) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8)
+           data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% select(response=value) %>% filter(!is.na(response)) %>% group_by(response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8)
     }
     return(y)
   }
   
   new_df_all<-function(x){
     y <- if(length(dataStore$dataLoc[[1]])==1 && dataStore$dataLoc[[1]][1] %in% commas){ #multiselect Qs
-      z<-data.frame(new_surveys[[6]] %>% select(response=qg_153))
+      z<-data.frame(new_surveys[[x]] %>% select(response=dataStore$dataLoc[[1]][1]))
       z<-data.frame(response=unlist(strsplit(as.character(z$response), ",")))
       z<-z %>% group_by(response) %>% drop_na() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2), year=2017) %>% drop_na() %>% top_n(8,per)
       z
-         } else if(length(dataStore$dataLoc[[x]][[1]])==1){
+         } else if(length(dataStore$dataLoc[[x]][[1]])==1 && dataStore$dataLoc[[1]][1] %notin% commas){
                 data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(response=dataStore$dataLoc[[x]][[1]][1],year=surveyYear,surveyId=standardId) %>% filter(!is.na(response)) %>% group_by(year,response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8,per)
          } else {
                 data.frame(new_surveys[[x]] %>% filter(surveyCountry %in% countryFilter()) %>% select(dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2],year=surveyYear,surveyId=standardId) %>% gather(key,value,dataStore$dataLoc[[x]][[1]][1]:dataStore$dataLoc[[x]][[1]][2]) %>% select(response=value,year,surveyId) %>% filter(!is.na(response)) %>% group_by(year,response) %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2))) %>% drop_na() %>% top_n(8,per)
@@ -184,9 +193,9 @@ server <- function(input, output, session) {
   ## create graph ##
   p<-reactive({
     if(nrow(df()!=0) & input$dataSelect!=1){
-      p<-plot_ly(df(), x=~response, y=~per, type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep="")) %>% layout(legend=list(x=100,y=0))
+      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="YlOrRd",type="bar",hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep="")) %>% layout(legend=list(x=100,y=0))
     } else if(nrow(df()!=0) & input$dataSelect==1){
-      p<-plot_ly(df(), x=~year, y=~per, color=~response, type="scatter", mode="lines",width=800,height=600,hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep="")) %>% layout(legend=list(xanchor="center",orientation='h',y=100),autosize=F)
+      p<-plot_ly(df(), x=~year, y=~per, color=~response, colors="YlOrRd", type="scatter", mode="lines",width=800,height=600,hoverinfo='text',text= ~paste(response,'<br>Percentage: ', per,'%',sep="")) %>% layout(legend=list(xanchor="center",orientation='h',y=-1),autosize=F)
     }
   })
   output$graph<-renderPlotly({
@@ -198,6 +207,8 @@ server <- function(input, output, session) {
   #### ####
   ## print error ##
   output$error<-renderText({
+    str(df())
+    print(df())
   })
   ## return to questions list ##
   observeEvent(input$return, {
