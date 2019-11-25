@@ -1,3 +1,6 @@
+# This code does XXXXX
+# Code developed by Vera Choo, with reference from: XXXX
+
 library(shiny)
 library(dplyr)
 library(tidyr)
