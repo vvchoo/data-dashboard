@@ -1,0 +1,13 @@
+name: snap-polls
+title: snap-polls
+username:
+account: vvchoo
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1634642
+bundleId: 2715031
+url: https://vvchoo.shinyapps.io/snap-polls/
+when: 1578510264.7503
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.RData|app ver 1.R|DESCRIPTION|journal app.R|LICENSE|manipulation.R|notes.R|policy journal app.R|snap_polls.html
