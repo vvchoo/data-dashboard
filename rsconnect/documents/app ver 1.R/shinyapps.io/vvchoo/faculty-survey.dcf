@@ -1,0 +1,13 @@
+name: faculty-survey
+title: faculty-survey
+username:
+account: vvchoo
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1106674
+bundleId: 2616810
+url: https://vvchoo.shinyapps.io/faculty-survey/
+when: 1574712634.36897
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.RData|DESCRIPTION|journal app.R|LICENSE|manipulation.R|notes.R|policy journal app.R|snap polls.R|snap_polls.html
