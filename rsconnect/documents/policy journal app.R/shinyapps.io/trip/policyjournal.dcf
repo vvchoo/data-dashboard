@@ -1,0 +1,13 @@
+name: policyjournal
+title: policyjournal
+username:
+account: trip
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1083667
+bundleId: 2315219
+url: https://trip.shinyapps.io/policyjournal/
+when: 1565704460.84749
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|journal app.R|notes.R|snap polls.R
