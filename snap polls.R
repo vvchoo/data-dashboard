@@ -8,8 +8,9 @@ library(ggplot2)
 library(plotly)
 library(rsconnect)
 library(RColorBrewer)
-library(rclipboard)
-library(clipr)
+library(viridis)
+library(colorspace)
+
 #setwd("C:/Users/Vera/Desktop/FALL 2019/TRIP/WEB/SNAP POLLS")
 
 ###### read in snap polls ########
@@ -44,6 +45,7 @@ snap_cb<-list("snap_1"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/sna
 
 commas<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/commas.rds"))
 multipart<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/multipart.rds"))
+notes<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/notes.rds"))
 
 #######################################################
 #                   USER INTERFACE                    #
@@ -52,53 +54,17 @@ ui <- function(req){
   fluidPage(
   tags$head(
     tags$style(HTML("
-                    .action-button{
-                      padding:10px;
-                      margin-top:-12px;
-                      display:block;
-                      background-color:#e1eaf0;
-                      transition: background-color .3s, color .3s;
-                      border-radius:5px;
-                    }
-                    .action-button:hover{
-                      background-color:#edf2f5;
-                      transition: background-color .3s, color .3s;
-                      text-decoration:none;
-                    }
-                    .well{
-                     background-color:#e1eaf0;
-                    }
-                    #tweet{
-                      background-color:#1DA1F2;
-                      color:#ffffff;
-                      font-weight:bold;
-                      width:100%;
-                    }
-                    #return{
-                      background-color:#f2f9fc;
-                      transition: background-color .3s, color .3s;
-                      border-color:#ffffff;
-                      width:100%;
-                      font-weight:bold;
-                    }
-                    #return:hover{
-                      background-color:#fafdff;
-                      transition: background-color .3s, color .3s;
-                    }
-                    #clipbtn{
-                      background-color:#fff;
-                      font-weight:bold;
-                      width:100%;
-                    }
-                    #clipbtn:hover{
-                      background-color:#edf2f5;
-                    transition: background-color .3s, color .3s;
-                    }
-                    #tweet:hover{
-                      background-color:#65bff6;
-                      transition: background-color .3s, color .3s;
-                    }
-
+                    #display-titles{width:75%;height:200px;overflow:clip;color:#fff;display:block;margin:auto;background-color:#000;z-index:1000;margin-top:-100px;}
+                    .text{transform-origin: top left;transform:rotate(315deg); width:220px;overflow:break-word;color:#000;margin-top:160px;}
+                    .action-button{padding:10px; margin-top:-12px;display:block;background-color:#e1eaf0;transition: background-color .3s, color .3s; border-radius:5px;}
+                    .action-button:hover{background-color:#edf2f5;transition: background-color .3s, color .3s;text-decoration:none;}
+                    .well{ background-color:#e1eaf0;}
+                    #tweet{background-color:#1DA1F2;color:#ffffff;font-weight:bold;width:100%;}
+                    #return{background-color:#f2f9fc;transition: background-color .3s, color .3s;border-color:#ffffff;width:100%;font-weight:bold;}
+                    #return:hover{ background-color:#fafdff;  transition: background-color .3s, color .3s;}
+                    #clipbtn{background-color:#fff;font-weight:bold;width:100%;}
+                    #clipbtn:hover{background-color:#edf2f5;transition: background-color .3s, color .3s;}
+                    #tweet:hover{background-color:#65bff6;transition: background-color .3s, color .3s;}
                     "))
     ),
   titlePanel(h1(strong("Snap Polls"))),
@@ -128,12 +94,12 @@ ui <- function(req){
                                        wellPanel(
                                          selectInput("crosstabList","Crosstab:",
                                                      c("Select.."="NULL","All respondents"="NO","Gender"="gender","Rank"="rank","Age"="age","Economic Ideology"="econ_ideology","Social Ideology"="social_ideology","Party Identification"="party_id")),br(),
-                                         
-                                         uiOutput("clip"),br(),
+                                         actionButton("clipbtn","Copy URL",icon("clipboard")),br(),
                                          actionButton("tweet","Tweet",onclick="window.open('http://twitter.com/intent/tweet?text=' + encodeURIComponent(window.location.href))"),br(),
-                                         actionButton("return","Return to question list"))),
+                                         actionButton("return","Return to question list")),
+                                       uiOutput("exp_notes")),
                                 column(9,
-                                       textOutput("error"),
+                                       #uiOutput("titles"),
                                        uiOutput("noGraph"),
                                        plotlyOutput("graph"),
                                        br(),br())))),
@@ -174,28 +140,28 @@ server <- function(input, output, session) {
     y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas[,1]){ #multiselect Qs
       len<-commas[grep(dataStore$dataLoc[1],commas[,1]),2]
       z<-data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]))
-      z<-z %>% drop_na() %>% separate(response,c(paste("response",1:len,sep="_")),sep=",") %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",len)) %>% select(-key) %>% group_by_all() %>% mutate(per=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(per))
+      z<-z %>% drop_na() %>% separate(response,c(paste("response",1:len,sep="_")),sep=",") %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",len)) %>% select(-key) %>% group_by_all() %>% mutate(Percentage=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(Percentage))
       z
     } else if(length(dataStore$dataLoc)==2 && dataStore$dataLoc[1] %in% names(multipart)){
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
       z<-data.frame(snap[[x]] %>% select(dataStore$dataLoc[1]:dataStore$dataLoc[2],crosstabs()))
       z<-lapply(1:len, function(x){
         if(!is.null(crosstabs())){
-          y<-z[c(len+1,x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
-          names(y)<-c(crosstabs(),"response","n","per", "sub_question")
+          y<-z[c(len+1,x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
+          names(y)<-c(crosstabs(),"response","n","Percentage", "sub_question")
           y 
         } else if(is.null(crosstabs())){
-          y<-z[c(x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(per=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
-          names(y)<-c("response","n","per", "sub_question")
+          y<-z[c(x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
+          names(y)<-c("response","n","Percentage", "sub_question")
           y   
         }
       })
       z<-do.call(rbind,z)
       z
     } else if(length(dataStore$dataLoc)==1){
-      data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(per=round(n/sum(n)*100,2)))
+      data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)))
     } else if(length(dataStore$dataLoc)==2){
-      data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,value,dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% select(crosstabs(), response=value,total_n) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(per=round(n/total_n*100,2)) %>% select(-total_n))
+      data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,value,dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% select(crosstabs(), response=value,total_n) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(Percentage=round(n/total_n*100,2)) %>% select(-total_n))
     }
     return(y)
   }
@@ -204,35 +170,33 @@ server <- function(input, output, session) {
     df<-new_df(as.numeric(input$dataSelect))
     return(df)
   })
+  ##### #####
   
   ###################### G R A P H ######################
   ## create graph ##
   p<-reactive({
     if(dataStore$dataLoc[1] %in% names(multipart)){
       if(is.null(crosstabs())){
-        p<-plot_ly(df(), x=~sub_question, y=~per, color=~response, colors="RdYlBu", type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep=""), height=650) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 450))
+        p<-plot_ly(df(), x=~sub_question, y=~Percentage, color=~response, colors=sequential_hcl(15,"SunsetDark"), type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', Percentage,'%',sep=""), height=600) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 200),xaxis=list(title = ""))
     } else if(!is.null(crosstabs())){
         len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
         sub_q<-multipart[[grep(dataStore$dataLoc[1],names(multipart))]]
-        p_list_1<-df() %>% filter(sub_question==sub_q[1]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="RdYlBu",type='bar', height=650,hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep="")) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[1],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=50, b=50),barmode='stack', xaxis=list(title=""))
-        p_list<-assign(paste("p",len,sep="_"), lapply(2:len, function(x) df() %>% filter(sub_question==sub_q[x]) %>% plot_ly(x=~get(crosstabs()), y=~per, color=~response,colors="RdYlBu",type='bar',showlegend=FALSE, height=650,hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', per,'%',sep="")) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[x],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=50, b=50),barmode='stack', xaxis=list(title=""))))
+        p_list_1<-df() %>% filter(sub_question==sub_q[1]) %>% plot_ly(x=~get(crosstabs()), y=~Percentage, color=~response,colors=sequential_hcl(15,"SunsetDark"),type='bar', height=800,hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', Percentage,'%',sep="")) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[1],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=150, b=250),barmode='stack', xaxis=list(title=""))
+        p_list<-assign(paste("p",len,sep="_"), lapply(2:len, function(x) df() %>% filter(sub_question==sub_q[x]) %>% plot_ly(x=~get(crosstabs()), y=~Percentage, color=~response,colors=sequential_hcl(15,"SunsetDark"),type='bar',showlegend=FALSE, height=800,hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', Percentage,'%',sep="")) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[x],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=150, b=250),barmode='stack', xaxis=list(title=""))))
         p_list[[len]]<-p_list_1
-        p<-subplot(p_list,shareX=TRUE,shareY=TRUE) %>% layout(showlegend=TRUE)
+        p<-subplot(p_list,shareX=TRUE,shareY=TRUE) %>% layout(showlegend=TRUE,xaxis=list(title = ""))
     }
     } else if(!is.null(crosstabs())){
-      p<-plot_ly(df(), x=~response, y=~per, color=~get(crosstabs()), colors="RdYlBu", type="bar",hoverinfo='text',text=~paste(get(crosstabs()),'<br>',response,'<br>Percentage: ', per,'%',sep=""), height=650) %>% layout(bargap=5,legend=list(.08,.08),margin=list(l=50, r=0, t=50, b=450))
+      p<-plot_ly(df(), x=~response, y=~Percentage, color=~get(crosstabs()), colors=sequential_hcl(15,"SunsetDark"), type="bar",hoverinfo='text',text=~paste(get(crosstabs()),'<br>',response,'<br>Percentage: ', Percentage,'%',sep=""), height=600) %>% layout(bargap=5,legend=list(.08,.08),margin=list(l=50, r=50, t=50, b=200),xaxis=list(title = ""))
     } else if(is.null(crosstabs())){
-      p<-plot_ly(df(), x=~response, y=~per, color=~response, colors="RdYlBu", type="bar",hoverinfo='text',text= ~paste('<br>',response,'<br>Percentage: ', per,'%',sep=""), height=650) %>% layout(bargap=5,legend=list(.08,.08),margin=list(l=50, r=0, t=0, b=450),barmode='relative')
+      p<-plot_ly(df(), x=~response, y=~Percentage, color=~response, colors=sequential_hcl(15,"SunsetDark"), type="bar",hoverinfo='text',text= ~paste('<br>',response,'<br>Percentage: ', Percentage,'%',sep=""), height=600) %>% layout(bargap=5,legend=list(.08,.08),margin=list(l=50, r=50, t=50, b=200),barmode='relative',xaxis=list(title = ""))
     }
   })
+  # color used to be "RdYlBu"
   
   output$graph<-renderPlotly({
     p()
   })
-  ## print error ##
-
-    output$error<-renderText({
-    })
     
   ## return to questions list ##
   observeEvent(input$return, {
@@ -242,27 +206,35 @@ server <- function(input, output, session) {
   output$selectedQ<-renderText({paste(qid()[,2][as.numeric(dataStore$dataNum)])})
   #### ####
   
+  note_display<-reactive({as.character(notes[(grep(dataStore$dataLoc[1],notes[,1])),2])})
+  output$exp_notes<-renderUI({
+    if(dataStore$dataLoc[1] %in% notes[,1]){
+      wellPanel(strong(h5(note_display())))
+    }
+  })
   
+  output$titles<-renderUI({
+    if(dataStore$dataLoc[1] %in% names(multipart)){
+      test<-HTML(unlist(lapply(1:length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]]), function(x) paste0("<div style=\"margin-right:0;width:",(80/length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])),"%;display:inline-block;\"><div class=\"text\">",multipart[[grep(dataStore$dataLoc[1],names(multipart))]][[x]],"</div></div>"))))
+      HTML("<div id=\"display-titles\">",test,"</div")
+    }
+  })
+  
+  ## URL and bookmarking ##
   observe({
     reactiveValuesToList(input)
     session$doBookmark()
   })
-  
-  onBookmarked(function(url) {
-    updateQueryString(url)
-  })
-  
-  URL <- reactiveVal()
-  onBookmarked(function(url) {URL(url)})
-  output$clip <- renderUI({rclipButton("clipbtn","Copy URL",input$URLs,icon("clipboard"))})
-  observeEvent(input$clipbtn, clipr::write_clip(URL()))
-  
-  onRestore(function(state){
-    updateTabsetPanel(session,"Questions","Questions")
-  })
+  onBookmarked(function(url){updateQueryString(url)})
+  observeEvent(input$clipbtn, {showModal(urlModal(URL(), title="Copy URL to clipboard"))})
+   URL <- reactiveVal()
+   onBookmarked(function(url){URL(url)})
+   onRestore(function(state){updateTabsetPanel(session,"Questions","Questions")})
 }
 
 enableBookmarking(store = "url")
 shinyApp(ui, server)
+
+
 
 
