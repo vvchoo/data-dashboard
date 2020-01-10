@@ -1,0 +1,13 @@
+name: journal
+title: journal
+username:
+account: trip
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1083654
+bundleId: 2424170
+url: https://trip.shinyapps.io/journal/
+when: 1568814903.78175
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.RData|app ver 1.R|manipulation.R|notes.R|policy journal app.R|snap polls.R
