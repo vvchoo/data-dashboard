@@ -1,0 +1,13 @@
+name: snap-polls
+title: snap-polls
+username:
+account: trip
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1638236
+bundleId: 2720618
+url: https://trip.shinyapps.io/snap-polls/
+when: 1578696256.77016
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.RData|app ver 1.R|DESCRIPTION|journal app.R|LICENSE|manipulation.R|notes.R|policy journal app.R|snap_polls.html
