@@ -1,0 +1,13 @@
+name: Journal
+title: Journal
+username:
+account: vvchoo
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 981416
+bundleId: 2710318
+url: https://vvchoo.shinyapps.io/Journal/
+when: 1578343137.47849
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.RData|app ver 1.R|DESCRIPTION|LICENSE|manipulation.R|notes.R|policy journal app.R|snap polls.R|snap_polls.html
