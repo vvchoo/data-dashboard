@@ -24,40 +24,52 @@ plot_theme<-theme_bw() +
 ######################################################################################
 #                                    USER INTERFACE                                  #
 ######################################################################################
-ui <- fluidPage(
-  tags$head(
-    tags$style(HTML("
-                    .well{
-                        background-color:#e1eaf0;"
-    ))
-  ),
-  titlePanel(h1(strong("Journal Article Database")),
-             windowTitle="TRIP Journal Article Database"),
-  br(),
-  fluidRow(
-    column(4,
-           wellPanel(
-             tags$div(id="yearFilter",
-                      h4("Show by:"),
-             radioButtons("percentInput","Frequency or Percentage",choices=c("Frequency","Percentage"),inline=TRUE),
-             radioButtons("ygInput","X-axis: Year or Variable",c("Year","Variable"),inline=TRUE))),
-           wellPanel(
-             tags$div(id="newFilter",
-                      h4("See all articles which are:"),
-                      selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")),
-                      uiOutput("epistFilter"),uiOutput("contempFilter"),uiOutput("focusFilter"),uiOutput("ideaFilter"),uiOutput("issueFilter"),uiOutput("levelFilter"),uiOutput("materialFilter"),uiOutput("methodFilter"),uiOutput("paradigmFilter"),uiOutput("policyFilter"),uiOutput("regionFilter"),uiOutput("timeFilter"))),
-           wellPanel(
-             h4("Article year range:"),
-             sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep="")), #change when updated),
-           wellPanel(
-             h4("Downloaded your selected data set:"),
-             downloadButton("download","Download"),
-             strong(a(actionButton("tweet","Tweet", style="font-style:bold; background-color:#fff; background:url('https://trip.wm.edu/charts/downloads/tweet.png'); width:100px; height:30px; background-size:30px 30px; background-repeat:no-repeat; float:right;"), href="http://twitter.com/intent/tweet?text=Check%20out%20this%20data%20from%20the%20TRIP%20Project!&url=https://trip.wm.edu/data/jad-test"))
-           )),
-    column(8,verticalLayout(
-             tableOutput("view"),
-             plotlyOutput("plotly")))),
-  tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
+ui <- function(req){
+  fluidPage(
+    tags$head(
+      tags$style(HTML("
+                      .well{
+                        background-color:#e1eaf0;
+                      }
+                      #download{
+                        font-weight:bold;
+                      }
+                      #tweet{
+                        float:right;
+                        background-color:#00acee;
+                        font-weight:bold;
+                        color:#ffffff;
+                      }
+        "))
+      ),
+    titlePanel(h1(strong("Journal Article Database")),
+               windowTitle="TRIP Journal Article Database"),
+    br(),
+    fluidRow(
+      column(4,
+             wellPanel(
+               tags$div(id="yearFilter",
+                        h4("Show by:"),
+                        radioButtons("percentInput","Frequency or Percentage",choices=c("Frequency","Percentage"),inline=TRUE),
+                        radioButtons("ygInput","X-axis: Year or Variable",c("Year","Variable"),inline=TRUE))),
+             wellPanel(
+               tags$div(id="newFilter",
+                        h4("See all articles which are:"),
+                        selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Epistemology","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")),
+                        uiOutput("epistFilter"),uiOutput("contempFilter"),uiOutput("focusFilter"),uiOutput("ideaFilter"),uiOutput("issueFilter"),uiOutput("levelFilter"),uiOutput("materialFilter"),uiOutput("methodFilter"),uiOutput("paradigmFilter"),uiOutput("policyFilter"),uiOutput("regionFilter"),uiOutput("timeFilter"))),
+             wellPanel(
+               h4("Article year range:"),
+               sliderInput("yearInput","Year",1980,2017,c(1980,2017),sep="")), #change when updated),
+             wellPanel(
+               h4("Share your data:"),
+               downloadButton("download","Download"),
+               strong(a(actionButton("tweet","Tweet", onclick="window.open('http://twitter.com/intent/tweet?text=' + encodeURIComponent(window.location.href))")))
+             )),
+      column(8,verticalLayout(
+        tableOutput("view"),
+        plotlyOutput("plotly")))),
+    tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
+  }
 
 #######################################################################################
 #                                       SERVER                                        #
@@ -68,51 +80,51 @@ server <- function(input, output, session) {
     if(input$addFilter=="Paradigm") {
       output$paradigmFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("paradigmFilter", "Paradigm",multiple=TRUE,choices=c(names(table(JAD$Paradigm))))))})
+          ui=tags$div(selectInput("paradigmFilter", "Paradigm",multiple=TRUE,choices=c(names(table(JAD$Paradigm))))))})
     } else if(input$addFilter=="Epistemology"){
       output$epistFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("epistFilter", "Epistemology",multiple=TRUE,choices=c(names(table(JAD$Epistemology))))))})
+          ui=tags$div(selectInput("epistFilter", "Epistemology",multiple=TRUE,choices=c(names(table(JAD$Epistemology))))))})
     } else if(input$addFilter=="Policy Prescription"){
       output$policyFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("policyFilter", "Policy Prescription",multiple=TRUE,choices=c("Yes","No"))))})
+          ui=tags$div(selectInput("policyFilter", "Policy Prescription",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Contemporary"){
       output$contempFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("contempFilter", "Contemporary",multiple=TRUE,choices=c("Yes","No"))))})
+          ui=tags$div(selectInput("contempFilter", "Contemporary",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Level of Analysis"){
       output$levelFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("levelFilter", "Level of Analysis",multiple=TRUE,choices=c(names(table(JAD$Level))))))})
+          ui=tags$div(selectInput("levelFilter", "Level of Analysis",multiple=TRUE,choices=c(names(table(JAD$Level))))))})
     } else if(input$addFilter=="Ideational"){
       output$ideaFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("ideaFilter", "Ideational",multiple=TRUE,choices=c("Yes","No"))))})
+          ui=tags$div(selectInput("ideaFilter", "Ideational",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Issue Area"){
       output$issueFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("issueFilter", "Issue Area",multiple=TRUE,choices=c(names(table(JAD$IssueArea))))))})
+          ui=tags$div(selectInput("issueFilter", "Issue Area",multiple=TRUE,choices=c(names(table(JAD$IssueArea))))))})
     } else if(input$addFilter=="Region"){
       output$regionFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("regionFilter", "Region",multiple=TRUE,choices=c(names(table(JAD$Region))))))})
+          ui=tags$div(selectInput("regionFilter", "Region",multiple=TRUE,choices=c(names(table(JAD$Region))))))})
     } else if(input$addFilter=="Material"){
       output$materialFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("materialFilter","Material",multiple=TRUE,choices=c("Yes","No"))))})
+          ui=tags$div(selectInput("materialFilter","Material",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Methodology"){
       output$methodFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("methodFilter", "Methodology",multiple=TRUE,choices=c(names(table(JAD$Methodology))))))})
+          ui=tags$div(selectInput("methodFilter", "Methodology",multiple=TRUE,choices=c(names(table(JAD$Methodology))))))})
     } else if(input$addFilter=="Time Period"){
       output$timeFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c(names(table(JAD$TimePeriod))))))})
+          ui=tags$div(selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c(names(table(JAD$TimePeriod))))))})
     } else if(input$addFilter=="Substantive Focus"){ 
       output$focusFilter<-renderUI({
         tagList(
-        ui=tags$div(selectInput("focusFilter", "Substantive Focus",multiple=TRUE,choices=c(names(table(JAD$Focus))))))})
+          ui=tags$div(selectInput("focusFilter", "Substantive Focus",multiple=TRUE,choices=c(names(table(JAD$Focus))))))})
     }
   })
   
@@ -202,23 +214,14 @@ server <- function(input, output, session) {
         ylab("Frequency") +
         plot_theme
     }
-  p
+    p
   })
   
   dash_plot<-reactive({ggplotly(plot(), height=700) %>%
       layout(margin=list(b=300,l=100),autosize=T,yaxis=list(hoverinfo="p"))})
-    
+  
   output$plotly <- renderPlotly({ 
     dash_plot()
-  })
-  
-  #### create and tweet temp image ####
-  observeEvent(input$tweet, {
-    temp_file<-tempfile(tmpdir=tempdir(),fileext=".png")
-    #saveWidget(isolate(temp_plot()), temp_file, selfcontained=TRUE)
-    ggsave(temp_file, isolate(plot()), "png", width=4.6, height=2.4, dpi=100)
-    list(src=temp_file, contentType="png")
-    temp_file
   })
   
   #### test printout #### 
@@ -234,15 +237,23 @@ server <- function(input, output, session) {
   })
   
   output$download<-downloadHandler(filename=function(){
-      paste("TRIP_JAD_", format(Sys.Date(), "%Y_%b_%d"), ".csv",sep="")
-    },
-    content=function(file){
-      write.csv(csvDownload(), file, row.names=FALSE)
-    })
+    paste("TRIP_JAD_", format(Sys.Date(), "%Y_%b_%d"), ".csv",sep="")
+  },
+  content=function(file){
+    write.csv(csvDownload(), file, row.names=FALSE)
+  })
   
   ########
+  
+  observe({
+    reactiveValuesToList(input)
+    session$doBookmark()
+  })
+  
+  onBookmarked(function(url) {
+    updateQueryString(url)
+  })
 }
-
-shinyApp(ui = ui, server = server)
-
+enableBookmarking(store = "url")
+shinyApp(ui, server)
 
