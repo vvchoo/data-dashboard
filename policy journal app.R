@@ -5,155 +5,228 @@ library(shiny)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(plotly)
 library(rsconnect)
+library(colorspace)
+library(ggiraph)
 #rsconnect::setAccountInfo(name='vvchoo', token='20318BE8E51FD829619E1D7095A496CB', secret='VUQ9WQai6Vt1CftmuLpcaxg5j3pHNgYReyWhCGZK')
-PJD<-read.csv("https://www.dropbox.com/s/2gl6n77p69xohd8/TRIP_PolicyJournalDatabase_Articles_1.1.csv?dl=1",stringsAsFactors=FALSE,row.names=NULL)
 
-## reorder variables ##
-JAD<-JAD[c(1:10,23:25,36:38,11:22,26:35,39:97)]
-JAD<-JAD[-c(2,3,4,7,8,9)]
-
-## rename variables ##
-names(JAD)<-c("pubID","journal","year","Paradigm","Ideational","Material","Epistemology","Contemporary","PolicyPrescription","IssueArea","Realism Taken Seriously","Liberalism Taken Seriously","Marxism Taken Seriously","Constructivism Taken Seriously","Non-paradigmatic Taken Seriously","Atheoretic/None Taken Seriously","Realism Synthesis","Liberalism Synthesis","Marxism Synthesis","Constructivism Synthesis","Non-paradigmatic Synthesis","No Synthesis","Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period","Individual Level","State Level","International Level", "No Level","Analytic/non-formal","Counterfactual","Descriptive","Experimental","Formal Modeling","Policy analysis","Qualitative","Quantitative","Antarctica","Canada/Western Europe","East Asia","FSU / Eastern Europe","Global","Latin America","Middle East / North Africa","No region","Oceania","South Asia","Southeast Asia","Subsaharan Africa","United States","Alliances","Balance of Power","Bargaining Deterrence Strategy","Development","Diplomacy","Domestic Politics","Economic Interdependence","Environment","Ethnicity/Religion","Foreign Aid","Foreign Policy","Gender","Humanitarian","Intergovernmental Organization","Interstate Crisis","Interstate War","International Law","Intrastate Conflict","Discipline of IR","International Regimes","Migration","Monetary Policy","Non-governmental Organizations","North-South Relations","Public Health","Public Opinion","Regime Type","Regional Integration","Sanctions","Terrorism","Trade","Weapons Systems","Weapons of Mass Destruction Proliferation","Other")
-
-## rewrite JAD yes/no ##
-i<-11
-for(i in 11:91){
-  JAD[i]<-ifelse(JAD[i]=="Yes",JAD[i]<-names(JAD[i]),JAD[i]<-"")
-  i<-i+1
-}
-
-## gather data set ##
-JAD <- JAD %>% 
-  gather(TimePeriod, TimePeriod_value,`Pre-history to 476 AD`:`No time period`) %>% 
-  filter(TimePeriod_value!="")%>%
-  gather(Level,Level_value,`Individual Level`:`No Level`) %>%
-  filter(Level_value!="") %>%
-  gather(Focus,Focus_value,`Alliances`:`Other`) %>%
-  filter(Focus_value!="") %>%
-  gather(Seriously,Seriously_value,`Realism Taken Seriously`:`Atheoretic/None Taken Seriously`) %>% 
-  filter(Seriously_value!="") %>%
-  gather(Synthesis,Synthesis_value,`Realism Synthesis`:`No Synthesis`) %>%
-  filter(Synthesis_value!="") %>%
-  gather(Methodology,Methodology_value,`Analytic/non-formal`:`Quantitative`) %>%
-  filter(Methodology_value!="") %>%
-  gather(Region,Region_value,`Antarctica`:`United States`) %>%
-  filter(Region_value!="") %>%
-  select(pubID,journal,year,Paradigm,Epistemology,IssueArea,Ideational,Material,Contemporary,PolicyPrescription,TimePeriod,Level,Focus,Seriously,Synthesis,Methodology,Region)
-
-JAD$TimePeriod <- factor(JAD$TimePeriod, levels=c("Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","September 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present","No time period"))
+PJD<-readRDS(url("https://www.dropbox.com/s/4tiu6vppsxmi79k/pjd.rds?dl=1"))
+PJD_copy<-readRDS(url("https://www.dropbox.com/s/qsioleawhkrwh67/pjd_copy.rds?dl=1"))
 
 ## set up plot theme ##
 plot_theme<-theme_bw() +
-  theme(axis.text.x=element_text(angle=50), axis.title.x=element_text(vjust=1.5),axis.title.y=element_text(hjust=1.5))
+  theme(axis.text.x=element_text(angle=310,vjust=1,hjust=0,size=9),axis.ticks.y=element_blank(),axis.ticks.x=element_line(size=.25),axis.text.y=element_text(size=9), axis.title.x=element_text(vjust=0),axis.title.y=element_text(size=9),panel.grid.minor=element_blank(),panel.grid.major.x=element_blank(),legend.position="right",legend.direction="vertical",legend.key.width=unit(1.5, "points"),legend.key.height=unit(1.5, "points"),legend.margin=margin(0),legend.justification="top",legend.box.margin=margin(0),legend.text=element_text(size=9),legend.title=element_text(size=9),plot.margin=margin(0,60,0,1),strip.background=element_blank(),strip.text=element_text(size=9))
+
 
 ######################################################################################
 #                                    USER INTERFACE                                  #
 ######################################################################################
-ui <- fluidPage(
-  titlePanel("Journal Article Database"),
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("addFilter","Filter by..",choices=c("Select...","Contemporary","Epistemology","Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Paradigm","Policy Prescription","Region","Time Period")),
-      sliderInput("yearInput","Year",1980,2014,c(1980,2014),sep=""),
-      radioButtons("percentInput","Percentage or frequency",choices=c("Frequency","Percentage")),
-      radioButtons("ygInput","Show by..",c("Year","Variable"))),
-    mainPanel(plotlyOutput("plotly"))),
-  tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}")
-)
+ui <- function(req){
+  fluidPage(
+    tags$head(
+      tags$title("TRIP Policy Journal Database"),
+      tags$style(HTML("
+                      text{font-family: sans-serif}
+                      .well{background-color:#e1eaf0;}
+                      #download{font-weight:bold;width:100%;margin-top:10px;}
+                      #download:hover{background-color:#edf2f5;transition: background-color .3s, color .3s;}
+                      #downloadPlot{font-weight:bold;width:100%;margin-top:10px;}
+                      #downloadPlot:hover{background-color:#edf2f5;transition: background-color .3s, color .3s;}
+                      #clipbtn{background-color:#fff;font-weight:bold;width:100%;margin-top:10px;}
+                      #clipbtn:hover{background-color:#edf2f5;transition: background-color .3s, color .3s;}
+                      #tweet{background-color:#1DA1F2;color:#ffffff;font-weight:bold;width:100%;margin-top:10px;}
+                      #tweet:hover{background-color:#65bff6;transition: background-color .3s, color .3s;}
+                      #removeFocus{float:right;margin-bottom:5px;}
+                      #removeTime{float:right;margin-bottom:5px;}
+                      #removeMethod{float:right;margin-bottom:5px;}
+                      #removeIdea{float:right;margin-bottom:5px;}
+                      #removeIssue{float:right;margin-bottom:5px;}
+                      #removeContemp{float:right;margin-bottom:5px;}
+                      #removePolicy{float:right;margin-bottom:5px;}
+                      #removeRegion{float:right;margin-bottom:5px;}
+                      #removeLevel{float:right;margin-bottom:5px;}
+                      #removeMaterial{float:right;margin-bottom:5px;}
+                      "))
+      ),
+    titlePanel(h1(strong("Policy Journal Database")),
+               windowTitle="TRIP Policy Journal Database"),
+    br(),
+    fluidRow(
+      column(4,
+             wellPanel(
+               tags$div(id="yearFilter",
+                        h4("Show by:"),
+                        radioButtons("percentInput","Frequency or Percentage",choices=c("Frequency","Percentage"),inline=TRUE),
+                        radioButtons("ygInput","X-axis: Year or Variable",c("Year","Variable"),inline=TRUE))),
+             wellPanel(
+               tags$div(id="newFilter",
+                        h4("See only articles which are:"),
+                        selectInput("addFilter","Filter choice",choices=c("Select...","Contemporary","Substantive Focus","Ideational","Issue Area","Level of Analysis","Material","Methodology","Policy Prescription","Region","Time Period")),
+                        uiOutput("contempFilter"),uiOutput("focusFilter"),uiOutput("ideaFilter"),uiOutput("issueFilter"),uiOutput("levelFilter"),uiOutput("materialFilter"),uiOutput("methodFilter"),uiOutput("policyFilter"),uiOutput("regionFilter"),uiOutput("timeFilter"))),
+             wellPanel(
+               h4("Article year range:"),
+               sliderInput("yearInput","Year",2000,2016,c(2000,2016),sep="")), #change when updated),
+             wellPanel(
+               h4("Share your data:"),
+               actionButton("clipbtn","Copy URL",icon("clipboard")),br(),
+               strong(a(actionButton("tweet","Tweet", onclick="window.open('http://twitter.com/intent/tweet?text=' + encodeURIComponent(window.location.href))"))),
+               downloadButton("download","Download your data"),
+               downloadButton("downloadPlot","Save plot as .PNG"),br()
+             )),
+      column(8,
+        girafeOutput("girafe",width="99%",height="600px")#,
+        #imageOutput("legend",width="800px")
+        )),
+    tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"),
+    tags$script("
+    Shiny.addCustomMessageHandler('resetValue', function(variableName) {
+                Shiny.onInputChange(variableName, null);
+});
+                "))
+}
+
 
 #######################################################################################
 #                                       SERVER                                        #
 #######################################################################################
 server <- function(input, output, session) {
-  ## add new filter button ##  
+  #### add new filter button ####  
   observeEvent(input$addFilter, {
-    if(input$addFilter=="Paradigm") {
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("paradigmFilter", "Paradigm",multiple=TRUE,choices=c("All",names(table(JAD$Paradigm))))))
-    } else if(input$addFilter=="Epistemology"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("epistFilter", "Epistemology",multiple=TRUE,choices=c("All",names(table(JAD$Epistemology))))))
-    } else if(input$addFilter=="Policy Prescription"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("policyFilter", "Policy Prescription",multiple=TRUE,choices=c("All","Yes","No"))))
+    if(input$addFilter=="Policy Prescription"){
+      output$policyFilter<-renderUI({
+        tagList(tags$div(id="policyCont",
+                         actionButton("removePolicy","Remove"),  
+                         selectInput("policyFilter", "Policy Prescription",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Contemporary"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("contempFilter", "Contemporary",multiple=TRUE,choices=c("All","Yes","No"))))
+      output$contempFilter<-renderUI({
+        tagList(tags$div(id="contempCont",
+                         actionButton("removeContemp","Remove"),  
+                         selectInput("contempFilter", "Contemporary",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Level of Analysis"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("levelFilter", "Level of Analysis",multiple=TRUE,choices=c("No Level","Individual Level","State Level","International Level"))))
+      output$levelFilter<-renderUI({
+        tagList(tags$div(id="levelCont",
+                         actionButton("removeLevel","Remove"),  
+                         selectInput("levelFilter", "Level of Analysis",multiple=TRUE,choices=c(names(table(PJD$Level))))))})
     } else if(input$addFilter=="Ideational"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("ideaFilter", "Ideational",multiple=TRUE,choices=c("All","Yes","No"))))
+      output$ideaFilter<-renderUI({
+        tagList(tags$div(id="ideaCont",
+                         actionButton("removeIdea","Remove"),  
+                         selectInput("ideaFilter", "Ideational",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Issue Area"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("issueFilter", "Issue Area",multiple=TRUE,choices=c("All",names(table(JAD$IssueArea))))))
+      output$issueFilter<-renderUI({
+        tagList(tags$div(id="issueCont",
+                         actionButton("removeIssue","Remove"),  
+                         selectInput("issueFilter", "Issue Area",multiple=TRUE,choices=c(names(table(PJD$IssueArea))))))})
     } else if(input$addFilter=="Region"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("regionFilter", "Region",multiple=TRUE,choices=c("All","No region","Antarctica","Canada/Western Europe","East Asia","FSU / Eastern Europe","Global","Latin America","Middle East / North Africa","Oceania","South Asia","Southeast Asia","Subsaharan Africa","United States"))))
+      output$regionFilter<-renderUI({
+        tagList(tags$div(id="regionCont",
+                         actionButton("removeRegion","Remove"),  
+                         selectInput("regionFilter", "Region",multiple=TRUE,choices=c(names(table(PJD$Region))))))})
     } else if(input$addFilter=="Material"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("materialFilter","Material",multiple=TRUE,choices=c("All","Yes","No"))))
+      output$materialFilter<-renderUI({
+        tagList(tags$div(id="materialCont",
+                         actionButton("removeMaterial","Remove"),  
+                         selectInput("materialFilter","Material",multiple=TRUE,choices=c("Yes","No"))))})
     } else if(input$addFilter=="Methodology"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("methodFilter", "Methodology",multiple=TRUE,choices=c("All","Analytic/non-formal","Counterfactual","Descriptive","Experimental","Formal Modeling","Policy analysis","Qualitative","Quantitative"))))
+      output$methodFilter<-renderUI({
+        tagList(tags$div(id="methodCont",
+                         actionButton("removeMethod","Remove"),  
+                         selectInput("methodFilter", "Methodology",multiple=TRUE,choices=c(names(table(PJD$Methodology))))))})
     } else if(input$addFilter=="Time Period"){
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c("All","No time period","Pre-history to 476 AD","476 AD to October 1648","October 1648 to June 28, 1914","June 28, 1914 to June 28, 1919","June 28, 1919 to September 1, 1939","September 1, 1939 to August 1945","Septmber 1945 to November 9, 1989","November 9, 1989 to September 1, 2001","September 1, 2001 to Present"))))
-    } else if(input$addFilter=="Focus"){ 
-      insertUI(
-        selector="#yearInput",
-        where="afterEnd",
-        ui=tags$div(selectInput("focusFilter", "Focus area",multiple=TRUE,choices=c("All","Alliances","Balance of Power","Bargaining Deterrence Strategy","Development","Diplomacy","Domestic Politics","Economic Interdependence","Environment","Ethnicity/Religion","Foreign Aid","Foreign Policy","Gender","Humanitarian","Intergovernmental Organization","Interstate Crisis","Interstate War","International Law","Intrastate Conflict","Discipline of IR","International Regimes","Migration","Monetary Policy","Non-governmental Organizations","North-South Relations","Public Health","Public Opinion","Regime Type","Regional Integration","Sanctions","Terrorism","Trade","Weapons Systems","Weapons of Mass Destruction Proliferation","Other"))))
+      output$timeFilter<-renderUI({
+        tagList(tags$div(id="timeCont",
+                         actionButton("removeTime","Remove"),  
+                         selectInput("timeFilter", "Time Period",multiple=TRUE,choices=c(names(table(PJD$TimePeriod))))))})
+    } else if(input$addFilter=="Substantive Focus"){ 
+      output$focusFilter<-renderUI({
+        tagList(tags$div(id="focusCont",
+                         actionButton("removeFocus","Remove"),     
+                         selectInput("focusFilter", "Substantive Focus",multiple=TRUE,choices=c(names(table(PJD$Focus))))))})
     }
   })
   
-  ## change x-axis filters ##
+  observeEvent(input$removeFocus, {
+    removeUI(selector="#focusCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "focusFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="focusFilter")
+  })  
+  observeEvent(input$removeTime, {
+    removeUI(selector="#timeCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "timeFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="timeFilter")
+  })  
+  observeEvent(input$removeMethod, {
+    removeUI(selector="#methodCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "methodFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="methodFilter")
+  })  
+  observeEvent(input$removeMaterial, {
+    removeUI(selector="#materialCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "materialFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="materialFilter")
+  })  
+  observeEvent(input$removeRegion, {
+    removeUI(selector="#regionCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "regionFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="regionFilter")
+  })  
+  observeEvent(input$removeIssue, {
+    removeUI(selector="#issueCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "issueFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="issueFilter")
+  })  
+  observeEvent(input$removeIdea, {
+    removeUI(selector="#ideaCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "ideaFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="ideaFilter")
+  })  
+  observeEvent(input$removeLevel, {
+    removeUI(selector="#levelCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "levelFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="levelFilter")
+  })  
+  observeEvent(input$removeContemp, {
+    removeUI(selector="#contempCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "contempFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="contempFilter")
+  })
+  observeEvent(input$removePolicy, {
+    removeUI(selector="#policyCont")
+    updateSelectInput(session, "addFilter", selected="Select...")
+    updateSelectInput(session, "policyFilter", selected=character(0))
+    session$sendCustomMessage(type="resetValue", message="policyFilter")
+  })
+  
+  #### change x-axis filters ####
   observeEvent(input$ygInput, { 
     if(input$ygInput=="Variable"){
       insertUI(
         selector="#ygInput",
         where="afterEnd",
-        ui=tags$div(id="varFilter",selectInput("varFilter","X-Axis", c("Journal"="journal","Paradigm","Epistemology","Issue Area"="IssueArea","Time Period"="TimePeriod","Level","Methodology","Region","Focus","Policy Prescription"="PolicyPrescription"))))
+        ui=tags$div(id="varFilter",
+                    selectInput("varFilter","Variable", c("Journal"="journal","Issue Area"="IssueArea","Time Period"="TimePeriod","Contemporary","Level","Methodology","Region","Substantive Focus"="Focus","Policy Prescription"="PolicyPrescription"))))
     } else {
-      removeUI(selector="div:has(> #varFilter)")
+      removeUI(selector="#varFilter")
     }
   })
   
   #### create filtered data set ####
   filtered<-reactive({
-    data<-JAD
-    
-    if(input$ygInput=="Year"){data<-data %>% group_by(year) %>% mutate(year_distinct=n_distinct(pubID))}  # total distinct articles a year #
-    if(input$ygInput=="Variable"){data<-data %>% mutate(filter_N=n_distinct(pubID))}  # total distinct articles overall #
+    data<-PJD
+    data<-data %>% group_by(year) %>% mutate(year_distinct=n_distinct(pubID))  # total distinct articles a year #
+    data<-data %>% ungroup() %>% mutate(var_distinct=n_distinct(pubID)) 
     
     ## filter conditions ##
     if(!is.null(input$contempFilter)){data<-data[data$Contemporary %in% input$contempFilter,]}
-    if(!is.null(input$epistFilter)){data<-data[data$Epistemology %in% input$epistFilter,]}
     if(!is.null(input$focusFilter)){data<-data[data$Focus %in% input$focusFilter,]}
     if(!is.null(input$ideaFilter)){data<-data[data$Ideational %in% input$ideaFilter,]}
     if(!is.null(input$issueFilter)){data<-data[data$IssueArea %in% input$issueFilter,]}
@@ -162,58 +235,102 @@ server <- function(input, output, session) {
     if(!is.null(input$materialFilter)){data<-data[data$Material %in% input$materialFilter,]}
     if(!is.null(input$regionFilter)){data<-data[data$Region %in% input$regionFilter,]}
     if(!is.null(input$timeFilter)){data<-data[data$TimePeriod %in% input$timeFilter,]}
-    if(!is.null(input$paradigmFilter)){data<-data[data$Paradigm %in% input$paradigmFilter,]}
     if(!is.null(input$policyFilter)){data<-data[data$PolicyPrescription %in% input$policyFilter,]}
     
     data<-data %>% filter(year >= input$yearInput[1],year <= input$yearInput[2]) # change year range #
     
     ## manipulate data for plotting ##
     if(input$percentInput=="Frequency" & input$ygInput=="Variable"){
-      data<-data %>% group_by_(input$varFilter) %>% mutate(filter=n_distinct(pubID)) %>% mutate(filter_n=n()) # find unique articles in x-axis #
-      data<-data %>% mutate(Count=filter/filter_n)}
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by_at(input$varFilter,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count) %>% distinct_at(vars(input$varFilter,Count),.keep_all=TRUE)}
     if(input$percentInput=="Frequency" & input$ygInput=="Year"){
-      data_n<-data %>% group_by(year, pubID) %>% count(pubID) # create counts of pubID #
-      data<-left_join(data,data_n)
-      data$Count<-ifelse(data$n!=1,data$Count<-(1/data$n),data$Count<-1)} # create actual sum variable for stat_summary #
-    if(input$percentInput=="Percentage" & input$ygInput=="Year"){ # create new plotting variable for percentages #
-      data<-data %>% group_by(year) %>% mutate(distinct_filtered=n_distinct(pubID)) # find number of distinct articles after filtering #
-      data<-data %>% group_by(year) %>% mutate(year_filtered=n())  # find number of all observations in a year #
-      data<-data %>% mutate(Percentage=((distinct_filtered/year_filtered)/year_distinct)*100)}  # create percentages to sum for stat_summary #
-    if(input$percentInput=="Percentage" & input$ygInput=="Variable"){  # varFilter percentages #
-      data<-data %>% group_by_(input$varFilter) %>% mutate(filter=n_distinct(pubID)) %>% mutate(filter_n=n()) # find unique articles in x-axis #
-      data<-data %>% mutate(Percentage=((filter/filter_n)/filter_N)*100)} # create actual percentages to sum for stat_summary #
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by(year,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count) %>% distinct(year,.keep_all=TRUE)}
+    if(input$percentInput=="Percentage" & input$ygInput=="Year"){ 
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by(year,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count,year_distinct) %>% distinct(year,.keep_all=TRUE) %>% ungroup() %>% mutate(Percentage=Count/year_distinct*100)}
+    if(input$percentInput=="Percentage" & input$ygInput=="Variable"){
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by_at(input$varFilter,.drop=FALSE) %>% mutate(Count=n()) %>% distinct_at(vars(input$varFilter,Count,var_distinct),.keep_all=TRUE) %>% ungroup() %>% mutate(Percentage=Count/var_distinct*100)}
     
     data<-as.data.frame(data)
   })
   
-  ## create plot ##
-  output$plotly <- renderPlotly({
-    if(input$percentInput=="Percentage" & input$ygInput=="Variable"){ 
-      p<-ggplot(filtered(), aes_string(x=input$varFilter)) +
-        stat_summary(aes(y=Percentage),fun.y="sum",geom="bar",position="identity",fill="#a2c6da") +
-        ylab("Percentage") +
-        plot_theme 
-    } else if (input$percentInput=="Frequency" & input$ygInput=="Variable") {
-      p<-ggplot(filtered(), aes_string(x=input$varFilter)) +
-        stat_summary(aes(y=Count),fun.y="sum",geom="bar",position="identity",fill="#a2c6da") +
-        ylab("Frequency") +
-        plot_theme 
-    } else if (input$percentInput=="Percentage" & input$ygInput=="Year") {
-      p<-ggplot(filtered(), aes(x=year)) +
-        stat_summary(aes(y=Percentage),fun.y="sum",geom="bar",position="identity",fill="#a2c6da") +
-        ylab("Percentage") +
-        xlab("Year") +
-        plot_theme
+  #### create plot ####
+  plot<-reactive({
+    if(input$percentInput=="Percentage" & input$ygInput=="Variable"){
+      ggplot(filtered(), aes_string(x=input$varFilter)) +
+        ylab("Percentage") + xlab(paste(input$varFilter)) + plot_theme + 
+        geom_bar_interactive(aes(tooltip = paste0("<strong>Variable:</strong> " , get(input$varFilter), "<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity", size=2, show.legend=TRUE,fill="#a2c6da") +
+        scale_y_continuous(expand=expand_scale(add=c(0,3.25))) +
+        scale_x_discrete(drop=FALSE) +
+        theme(legend.position="bottom")
+    } else if (input$percentInput=="Frequency" & input$ygInput=="Variable"){
+      ggplot(filtered(), aes_string(x=input$varFilter)) +
+        ylab("Frequency") + xlab(paste(input$varFilter)) + plot_theme + 
+        geom_bar_interactive(aes(tooltip=paste0("<strong>Variable:</strong> " ,get(input$varFilter), "<br> <strong>Count:</strong> ", round(Count,2)),y=Count),stat="identity", size=1, show.legend=TRUE,fill="#a2c6da") +
+        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$Count))))) +
+        scale_x_discrete(drop=FALSE) +
+        theme(legend.position="right",legend.direction="vertical",legend.key.size=unit(6.5,"points"),legend.margin=margin(0),legend.justification="top",legend.box.margin=margin(0),legend.text=element_text(size=7.5),legend.title=element_text(size=8)) +
+        guides(fill=guide_legend(ncol=1))
+    } else if (input$percentInput=="Percentage" & input$ygInput=="Year"){
+      ggplot(filtered(), aes(x=year)) +
+        scale_y_continuous(expand=expand_scale(add=c(0,3.25))) +
+        scale_x_continuous(breaks=seq(2000,2017,2),labels=seq(2000,2017,2),name="Year") +
+        ylab("Percentage") + xlab("Year") + plot_theme + 
+        geom_bar_interactive(aes(tooltip = paste0("<strong>Year:</strong> " ,year, "<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage,fill=year),stat="identity", size = 2, show.legend=TRUE,fill="#a2c6da") +
+        theme(legend.position="bottom")
     } else { # frequency by year #
-      p<-ggplot(filtered(), aes(x=year)) +
-        stat_summary(aes(y=Count),fun.y="sum",geom="bar",position="identity",fill="#a2c6da") +
-        xlab("Year") +
-        ylab("Frequency") +
-        plot_theme
+      ggplot(filtered(), aes(x=year)) +
+        scale_x_continuous(breaks=seq(2000,2017,2),labels=seq(2000,2017,2),name="Year") +
+        scale_y_continuous(expand=expand_scale(add=c(0,3.25))) +
+        ylab("Frequency") + xlab("Year") + plot_theme + 
+        geom_bar_interactive(aes(tooltip = paste0("<strong>Year:</strong> " ,year, "<br> <strong>Count:</strong> ", round(Count,2)),y=Count,fill=year),stat="identity", size = 2, show.legend=TRUE,fill="#a2c6da") +
+        theme(legend.position="bottom")
     }
-    ggplotly(p, hoverformat='.0f',height=700) %>%
-      layout(margin=list(b=300,l=100),autosize=T)
   })
+  
+  output$girafe<-renderGirafe({
+    girafe_options(girafe(ggobj=plot()),width_svg=7,height_svg=6,opts_zoom(.5,2),opts_toolbar(saveaspng=FALSE),opts_sizing(rescale=FALSE,width=1),opts_tooltip(css="font-family:arial;font-size:12px;background-color:#ffffff;padding:5px;border-radius:7px;box-shadow:2px 2px #555555;"))
+  })
+ 
+  #### test printout #### 
+  output$view<-renderText({}) 
+  ########
+  
+  #### download csv file ####
+  pubID<-reactive({data.frame(as.integer(names(table(filtered()$pubID))))[[1]]})
+  csvDownload<-reactive({
+    data<-PJD_copy
+    data<-data[data$pubID %in% pubID(),]
+    data<-as.data.frame(data)
+  })
+  
+  output$download<-downloadHandler(filename=function(){
+    paste("TRIP_PJD_", format(Sys.Date(), "%Y_%b_%d"), ".csv",sep="")
+  },
+  content=function(file){
+    write.csv(csvDownload(), file, row.names=FALSE)
+  })
+  
+  output$downloadPlot <- downloadHandler(filename=function(){
+    paste("TRIP_PJD_", format(Sys.Date(), "%Y_%b_%d"),".png", sep="")
+    },
+    content=function(file){
+      ggsave(file,plot(),device="png",width=6,height=3.5,dpi=300)
+    })
+  
+  ########
+  
+  ## URL and bookmarking ##
+  observe({
+    reactiveValuesToList(input)
+    session$doBookmark()
+  })
+  
+  onBookmarked(function(url){updateQueryString(url)})
+  observeEvent(input$clipbtn, {showModal(urlModal(URL(), title="Copy URL to clipboard"))})
+  URL <- reactiveVal()
+  onBookmarked(function(url){URL(url)})
+  setBookmarkExclude("clipbtn")
 }
 
-shinyApp(ui = ui, server = server)
+enableBookmarking(store = "url")
+shinyApp(ui, server)
+
