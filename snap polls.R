@@ -87,10 +87,7 @@ ui <- function(req){
                                                "Snap Poll XII: 2020 Primary, Impeachment, and Trump's Foreign Policy"=12)))), # updates go here
                        mainPanel(br(),uiOutput("questions"),tableOutput("print"))),
               tabPanel("Graph",
-                       fluidRow(column(12,
-                                       strong(h3(textOutput("selectedQ"))),
-                                       br())),
-                       fluidRow(column(3,
+                       fluidRow(column(3,br(),
                                        wellPanel(
                                          selectInput("crosstabList","Crosstab:",
                                                      c("Select.."="NULL","All respondents"="NO","Gender"="gender","Rank"="rank","Age"="age","Economic Ideology"="econ_ideology","Social Ideology"="social_ideology","Party Identification"="party_id")),br(),
@@ -99,6 +96,7 @@ ui <- function(req){
                                          actionButton("return","Return to question list")),
                                        uiOutput("exp_notes")),
                                 column(9,
+                                       strong(h3(textOutput("selectedQ"))),
                                        #uiOutput("titles"),
                                        uiOutput("noGraph"),
                                        plotlyOutput("graph"),
@@ -213,13 +211,6 @@ server <- function(input, output, session) {
     }
   })
   
-  output$titles<-renderUI({
-    if(dataStore$dataLoc[1] %in% names(multipart)){
-      test<-HTML(unlist(lapply(1:length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]]), function(x) paste0("<div style=\"margin-right:0;width:",(80/length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])),"%;display:inline-block;\"><div class=\"text\">",multipart[[grep(dataStore$dataLoc[1],names(multipart))]][[x]],"</div></div>"))))
-      HTML("<div id=\"display-titles\">",test,"</div")
-    }
-  })
-  
   ## URL and bookmarking ##
   observe({
     reactiveValuesToList(input)
@@ -230,6 +221,7 @@ server <- function(input, output, session) {
    URL <- reactiveVal()
    onBookmarked(function(url){URL(url)})
    onRestore(function(state){updateTabsetPanel(session,"Questions","Questions")})
+   setBookmarkExclude("clipbtn")
 }
 
 enableBookmarking(store = "url")
