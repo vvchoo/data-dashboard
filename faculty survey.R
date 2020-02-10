@@ -18,6 +18,7 @@ surveys<-readRDS(url("https://www.dropbox.com/s/tqz1oi33powdy95/surveys.rds?dl=1
 qid_list<-readRDS(url("https://www.dropbox.com/s/3j0vn6fdq9rojkv/qid_list.rds?dl=1"))
 commas<-readRDS(url("https://www.dropbox.com/s/6lq2la4n47yx2v3/commas.rds?dl=1"))
 multipart<-readRDS(url("https://www.dropbox.com/s/1ysmiq24hgydfkc/multipart.rds?dl=1"))
+palette<-readRDS(url("https://www.dropbox.com/s/y4paezgfjk8ddcm/palette.rds?dl=1"))
 
 `%notin%` <- Negate(`%in%`)
 plot_theme<-theme_bw() +
@@ -186,7 +187,7 @@ server <- function(input, output, session) {
     } else if(length(dataStore$dataLoc[[1]])==1){
         data.frame(surveys[[x]] %>% select(crosstabs(),Response=dataStore$dataLoc[[1]][1]) %>% filter(!is.na(Response)) %>% drop_na() %>% group_by_all(.drop=FALSE) %>% summarize(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2))) %>% group_by_at(crosstabs()) %>% top_n(8,Percentage) %>% droplevels()
     } else if(length(dataStore$dataLoc[[1]])==2){
-        data.frame(surveys[[x]] %>% select(crosstabs(),dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% select(crosstabs(), Response=value,total_n) %>% filter(!is.na(Response)) %>% drop_na() %>% group_by_all(.drop=FALSE) %>% summarize(n=n()) %>% mutate(Percentage=round(n/total_n*100,2)) %>% select(-total_n)) %>% group_by_at(crosstabs()) %>% arrange(desc(Percentage))
+        data.frame(surveys[[x]] %>% select(crosstabs(),dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,value,dataStore$dataLoc[[1]][1]:dataStore$dataLoc[[1]][2]) %>% select(crosstabs(), Response=value,total_n) %>% filter(!is.na(Response)) %>% drop_na() %>% group_by_all(.drop=FALSE) %>% summarize(n=n()) %>% mutate(Percentage=round(n/total_n*100,2)) %>% select(-total_n)) %>% group_by_at(crosstabs()) %>% top_n(8,Percentage)
     }
     return(y)
   }
@@ -211,9 +212,22 @@ server <- function(input, output, session) {
       df<-data.frame(new_df(as.numeric(input$dataSelect)))
     }
     levels(df$Response)<-gsub("'","'",levels(df$Response))
-    levels(df$Response)<-gsub("'","'",levels(df$Response))
+    levels(df$Response)<-gsub("'"," ",levels(df$Response))
+    levels(df$Response)<-gsub("'"," ",levels(df$Response))
     levels(df$Response)<-gsub("[\\]'","'",levels(df$Response))
     df$Response<-factor(df$Response)
+    levels(df$Response)<-str_wrap(levels(df$Response),width=35)
+    if(!is.null(df$sub_question)){
+      levels(df$sub_question)<-gsub("'","'",levels(df$sub_question))
+      levels(df$sub_question)<-gsub("'"," ",levels(df$sub_question))
+      levels(df$sub_question)<-gsub("'"," ",levels(df$sub_question))
+      df$sub_question<-factor(df$sub_question)
+      levels(df$sub_question)<-str_wrap(levels(df$sub_question),width=40)}
+    if(!is.null(crosstabs())){
+      if(is.null(df$sub_question)){levels(df[[1]])<-str_wrap(levels(df[[1]]),width=35)}
+      if(!is.null(df$sub_question)){levels(df[[1]])<-str_wrap(levels(df[[1]]),width=1)}
+    }
+    df$Percentage[is.nan(df$Percentage)]<-0
     return(df)
   })
   
@@ -225,59 +239,65 @@ server <- function(input, output, session) {
     if(input$dataSelect!=7){    
       if(dataStore$dataLoc[[1]][1] %in% names(multipart)){
         if(is.null(crosstabs())){
-          plot<-ggplot(df(), aes(x=str_wrap(sub_question,width=50),fill=str_wrap(Response,width=30))) +
+          plot<-ggplot(df(), aes(x=sub_question,fill=Response)) +
             ylab("Percentage") + xlab("") + plot_theme + 
             geom_bar_interactive(aes(tooltip = paste0("<strong>Response:</strong> ",enc2utf8(as.character(Response)),"<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity",size=2, show.legend=TRUE,drop=FALSE) +
             #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response),size=2.5,vjust=-.5,color="#959595")} +
-            scale_fill_discrete_sequential(palette="SunsetDark",name="Legend") +
+            scale_fill_manual(values=palette[1:length(levels(df()[[1]]))],name="Legend") +
+            #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend") +
             scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
             guides(fill=guide_legend(ncol=1))   
         } else if(!is.null(crosstabs())){
-          plot<-ggplot(df(), aes(x=str_wrap(sub_question,width=50),fill=str_wrap(Response,width=30))) +
-            ylab("Percentage") + xlab("") + plot_theme + facet_grid(~str_wrap(get(crosstabs()),width=1)) +
+          plot<-ggplot(df(), aes(x=sub_question,fill=Response)) +
+            ylab("Percentage") + xlab("") + plot_theme + facet_grid(~get(crosstabs())) +
             geom_bar_interactive(aes(tooltip = paste0("<strong>Crosstab:</strong> ",get(crosstabs()),"<br><strong>Category:</strong> ",sub_question,"<br><strong>Response:</strong> ",enc2utf8(as.character(Response)),"<br><strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity",size=2, show.legend=TRUE,drop=FALSE) +
             #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response),size=2.5,vjust=-.5,color="#959595")} +
-            scale_fill_discrete_sequential(palette="SunsetDark",name="Legend") +
+            scale_fill_manual(values=palette[1:length(levels(df()[[1]]))],name="Legend") +
+            #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend") +
             scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
             guides(fill=guide_legend(ncol=1))          
         }
       } else {
         if(is.null(crosstabs())){
-          plot<-ggplot(df(), aes(x=Response,fill=str_wrap(Response,width=35))) +
+          plot<-ggplot(df(), aes(x=Response,fill=Response)) +
             ylab("Percentage") + xlab("") + plot_theme +
             geom_bar_interactive(aes(tooltip = paste0("<strong>Response:</strong> ",enc2utf8(as.character(Response)),"<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity", size=2, show.legend=TRUE) +
             #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response),size=2.5,vjust=-.5,color="#959595")} +
-            scale_fill_discrete_sequential(palette="SunsetDark",name="Legend",labels=function(x) str_wrap(x, width=48),drop=FALSE) +
-            scale_x_discrete(labels=function(x) str_wrap(x, width=48)) +
+            scale_fill_manual(values=palette[1:length(levels(df()[[1]]))],name="Legend") +
+            #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend",drop=FALSE) +
+            scale_x_discrete() +
             scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
             guides(fill=guide_legend(ncol=1))
         } else if(!is.null(crosstabs())){
-            plot<-ggplot(df(), aes(x=Response,fill=factor(get(crosstabs())))) +
+            plot<-ggplot(df(), aes(x=Response,fill=get(crosstabs()))) +
               ylab("Percentage") + xlab("") + plot_theme + 
               geom_bar_interactive(aes(tooltip=paste0("<strong>Crosstab:</strong> ",get(crosstabs()),"<br><strong>Response:</strong> ",enc2utf8(as.character(Response)),"<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity",size=1.5,show.legend=TRUE,position="dodge") + 
               #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response,group=factor(get(crosstabs()))),position=position_dodge(width=1),size=2.5,color="#959595",angle=90,hjust=-.15)} +
-              scale_fill_discrete_sequential(palette="SunsetDark",name="Legend",labels=function(x) str_wrap(x, width=48),drop=FALSE) +
-              scale_x_discrete(labels=function(x) str_wrap(x, width=48)) +
+              scale_fill_manual(values=palette[1:length(levels(df()[[1]]))],name="Legend") +
+              #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend",drop=FALSE) +
+              scale_x_discrete() +
               scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
               guides(fill=guide_legend(ncol=1))          
         }
       }
     } else if(input$dataSelect==7){
       if(is.null(crosstabs())){
-        plot<-ggplot(df(),aes(x=year,color=str_wrap(Response,width=35))) +
+        plot<-ggplot(df(),aes(x=year,color=Response)) +
           geom_line_interactive(aes(y=Percentage,x=(year),group=Response),position="identity") +
           geom_point_interactive(aes(tooltip=paste0("<strong>Response:</strong> ",enc2utf8(as.character(Response)),"<br><strong>Year:</strong> ", year,"<br><strong>Percentage:</strong> ",round(Percentage,2),"%"),y=Percentage,x=year,group=Response),position="identity",size=1) +
           #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=year),size=2.5,vjust=-.5,color="#959595")} +
-          scale_color_discrete_sequential(palette="SunsetDark",name="Legend",labels=function(x) str_wrap(x,width=30)) +
+          #scale_color_manual(values=palette[1:length(levels(df()[[1]]))],name="Legend") +
+          scale_color_discrete_sequential(palette="SunsetDark",name="Legend",labels) +
           scale_x_continuous(limits=c(2004,2017),breaks=c(2004,2006,2008,2011,2014,2017)) +
           scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
           plot_theme + theme(axis.text.x=element_text(angle=0,hjust=.50)) + guides(color=guide_legend(ncol=1))
       } else if(!is.null(crosstabs())) {
-        plot<-ggplot(df(),aes(x=year,color=str_wrap(Response,width=30))) + facet_grid(str_wrap(get(crosstabs()),width=1)~.) +
+        plot<-ggplot(df(),aes(x=year,color=Response)) + facet_grid(get(crosstabs())~.) +
           geom_line_interactive(aes(y=Percentage,x=(year),group=Response),position="identity") +
           geom_point_interactive(aes(tooltip=paste0("<strong>Crosstab:</strong> ",get(crosstabs()),"<br><strong>Response:</strong> ",enc2utf8(as.character(Response)),"<br><strong>Year:</strong> ", year,"<br><strong>Percentage:</strong> ",round(Percentage,2),"%"),y=Percentage,x=year,group=Response),position="identity",size=1) +
           #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=year),size=2.5,vjust=-.5,color="#959595")} +
-          scale_color_discrete_sequential(palette="SunsetDark",name="Legend",labels=function(x) str_wrap(x,width=30)) +
+          #scale_color_manual(values=palette[1:length(levels(df()[[1]]))],name="Legend") +
+          scale_color_discrete_sequential(palette="SunsetDark",name="Legend") +
           scale_x_continuous(limits=c(2004,2017),breaks=c(2004,2006,2008,2011,2014,2017)) +
           scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
           plot_theme + theme(axis.text.x=element_text(angle=0,hjust=.50)) + guides(color=guide_legend(ncol=1))
