@@ -5,47 +5,28 @@ library(shiny)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(plotly)
+library(ggiraph)
+library(stringr)
 library(rsconnect)
 library(RColorBrewer)
-library(viridis)
 library(colorspace)
+library(textutils)
 
 #setwd("C:/Users/Vera/Desktop/FALL 2019/TRIP/WEB/SNAP POLLS")
 
 ###### read in snap polls ########
-snap<-list("snap_1"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_1.rds")),
-           "snap_2"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_2.rds")),
-           "snap_3"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_3.rds")),
-           "snap_4"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_4.rds")),
-           "snap_5"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_5.rds")),
-           "snap_6"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_6.rds")),
-           "snap_7"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_7.rds")),
-           "snap_8"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_8.rds")),
-           "snap_9"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_9.rds")),
-           "snap_10"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_10.rds")),
-           "snap_11"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_11.rds")),
-           "snap_12"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_12.rds"))
-)
+snap<-readRDS(url("https://www.dropbox.com/s/pkbg8n6nuxx7fcx/snap.rds?dl=1"))
 
 #### read in codebooks ####
-snap_cb<-list("snap_1"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_1.rds")),
-           "snap_2"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_2.rds")),
-           "snap_3"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_3.rds")),
-           "snap_4"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_4.rds")),
-           "snap_5"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_5.rds")),
-           "snap_6"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_6.rds")),
-           "snap_7"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_7.rds")),
-           "snap_8"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_8.rds")),
-           "snap_9"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_9.rds")),
-           "snap_10"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_10.rds")),
-           "snap_11"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_11.rds")),
-           "snap_12"=readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/snap_cb_12.rds"))
-)
+snap_cb<-readRDS(url("https://www.dropbox.com/s/8gd9g1sep32ycee/snap_cb.rds?dl=1"))
 
 commas<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/commas.rds"))
 multipart<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/multipart.rds"))
 notes<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/notes.rds"))
+palette<-readRDS(url("https://www.dropbox.com/s/y4paezgfjk8ddcm/palette.rds?dl=1"))
+
+plot_theme<-theme_bw() +
+  theme(axis.text.x=element_text(angle=310,vjust=1,hjust=0,size=7),axis.ticks.y=element_blank(),axis.ticks.x=element_line(size=.25),axis.text.y=element_text(size=7.5), axis.title.x=element_text(vjust=0),axis.title.y=element_text(size=8),panel.grid.minor=element_blank(),panel.grid.major.x=element_blank(),legend.position="right",legend.direction="vertical",legend.key.width=unit(1.5, "points"),legend.key.height=unit(1.5, "points"),legend.margin=margin(0),legend.justification="top",legend.box.margin=margin(0),legend.text=element_text(size=7.5),legend.title=element_text(size=7.5),plot.margin=margin(0,0,0,0),strip.background=element_blank(),strip.text=element_text(size=7))
 
 #######################################################
 #                   USER INTERFACE                    #
@@ -53,7 +34,9 @@ notes<-readRDS(url("http://trip.wm.edu/charts/dashboard-data/snap-polls/notes.rd
 ui <- function(req){
   fluidPage(
   tags$head(
+    tags$title("TRIP Snap Polls"),
     tags$style(HTML("
+                    text{font-family: sans-serif;}
                     #display-titles{width:75%;height:200px;overflow:clip;color:#fff;display:block;margin:auto;background-color:#000;z-index:1000;margin-top:-100px;}
                     .text{transform-origin: top left;transform:rotate(315deg); width:220px;overflow:break-word;color:#000;margin-top:160px;}
                     .action-button{padding:10px; margin-top:-12px;display:block;background-color:#e1eaf0;transition: background-color .3s, color .3s; border-radius:5px;}
@@ -99,7 +82,8 @@ ui <- function(req){
                                        strong(h3(textOutput("selectedQ"))),
                                        #uiOutput("titles"),
                                        uiOutput("noGraph"),
-                                       plotlyOutput("graph"),
+                                       girafeOutput("graph",width="99%",height="725px"),
+                                       textOutput("error"),
                                        br(),br())))),
   tags$style(type="text/css", ".shiny-output-error{visibility: hidden;}", ".shiny-output-error:before{visibility:hidden;}"))
 }
@@ -137,8 +121,8 @@ server <- function(input, output, session) {
   new_df<-function(x){
     y <- if(length(dataStore$dataLoc)==1 && dataStore$dataLoc[1] %in% commas[,1]){ #multiselect Qs
       len<-commas[grep(dataStore$dataLoc[1],commas[,1]),2]
-      z<-data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]))
-      z<-z %>% drop_na() %>% separate(response,c(paste("response",1:len,sep="_")),sep=",") %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,response,response_1:paste0("response_",len)) %>% select(-key) %>% group_by_all() %>% mutate(Percentage=round(n()/total_n*100,2)) %>% distinct(response, .keep_all=TRUE) %>% arrange(desc(Percentage))
+      z<-data.frame(snap[[x]] %>% select(crosstabs(),Response=dataStore$dataLoc[1]))
+      z<-z %>% drop_na() %>% separate(Response,c(paste("Response",1:len,sep="_")),sep=",") %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,Response,Response_1:paste0("Response_",len)) %>% select(-key) %>% group_by_all() %>% mutate(Percentage=round(n()/total_n*100,2)) %>% distinct(Response, .keep_all=TRUE) %>% arrange(desc(Percentage))
       z
     } else if(length(dataStore$dataLoc)==2 && dataStore$dataLoc[1] %in% names(multipart)){
       len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
@@ -146,54 +130,100 @@ server <- function(input, output, session) {
       z<-lapply(1:len, function(x){
         if(!is.null(crosstabs())){
           y<-z[c(len+1,x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
-          names(y)<-c(crosstabs(),"response","n","Percentage", "sub_question")
+          names(y)<-c(crosstabs(),"Response","n","Percentage", "sub_question")
           y 
         } else if(is.null(crosstabs())){
           y<-z[c(x)] %>% group_by_all() %>% drop_na() %>% summarise(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)) %>% mutate(sub_question=multipart[[grep(names(z)[1],names(multipart))]][x])
-          names(y)<-c("response","n","Percentage", "sub_question")
+          names(y)<-c("Response","n","Percentage", "sub_question")
           y   
         }
       })
       z<-do.call(rbind,z)
       z
     } else if(length(dataStore$dataLoc)==1){
-      data.frame(snap[[x]] %>% select(crosstabs(),response=dataStore$dataLoc[1]) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)))
+      data.frame(snap[[x]] %>% select(crosstabs(),Response=dataStore$dataLoc[1]) %>% filter(!is.na(Response)) %>% drop_na() %>% group_by_all(.drop=FALSE) %>% summarize(n=n()) %>% mutate(Percentage=round(n/sum(n)*100,2)))
     } else if(length(dataStore$dataLoc)==2){
-      data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,value,dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% select(crosstabs(), response=value,total_n) %>% filter(!is.na(response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(Percentage=round(n/total_n*100,2)) %>% select(-total_n))
+      data.frame(snap[[x]] %>% select(crosstabs(),dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% group_by_at(crosstabs()) %>% mutate(total_n=n()) %>% gather(key,value,dataStore$dataLoc[1]:dataStore$dataLoc[2]) %>% select(crosstabs(), Response=value,total_n) %>% filter(!is.na(Response)) %>% drop_na() %>% group_by_all() %>% summarize(n=n()) %>% mutate(Percentage=round(n/total_n*100,2)) %>% select(-total_n))
     }
     return(y)
   }
   
   df<-reactive({
     df<-new_df(as.numeric(input$dataSelect))
+    #levels(df$Response)<-gsub("'","'",levels(df$Response))
+    # levels(df$Response)<-gsub("'"," ",levels(df$Response))
+    # levels(df$Response)<-gsub("'"," ",levels(df$Response))
+    levels(df$Response)<-gsub("[\\]'","'",levels(df$Response))
+    df$Response<-factor(df$Response)
+    levels(df$Response)<-str_wrap(levels(df$Response),width=35)
+    if(!is.null(df$sub_question)){
+      # levels(df$sub_question)<-gsub("'"," ",levels(df$sub_question))
+      # levels(df$sub_question)<-gsub("'"," ",levels(df$sub_question))
+      # levels(df$sub_question)<-gsub("'"," ",levels(df$sub_question))
+      df$sub_question<-factor(df$sub_question)
+      levels(df$sub_question)<-str_wrap(levels(df$sub_question),width=35)}
+    if(!is.null(crosstabs())){
+      if(is.null(df$sub_question)){levels(df[[1]])<-str_wrap(levels(df[[1]]),width=35)}
+      if(!is.null(df$sub_question)){levels(df[[1]])<-str_wrap(levels(df[[1]]),width=1)}
+    }
+    df$Percentage[is.nan(df$Percentage)]<-0
     return(df)
   })
   ##### #####
   
   ###################### G R A P H ######################
   ## create graph ##
-  p<-reactive({
-    if(dataStore$dataLoc[1] %in% names(multipart)){
-      if(is.null(crosstabs())){
-        p<-plot_ly(df(), x=~sub_question, y=~Percentage, color=~response, colors=sequential_hcl(15,"SunsetDark"), type="bar",hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', Percentage,'%',sep=""), height=600) %>% layout(barmode='stack',margin = list(l = 50, r = 50, t = 50, b = 200),xaxis=list(title = ""))
-    } else if(!is.null(crosstabs())){
-        len<-length(multipart[[grep(dataStore$dataLoc[1],names(multipart))]])
-        sub_q<-multipart[[grep(dataStore$dataLoc[1],names(multipart))]]
-        p_list_1<-df() %>% filter(sub_question==sub_q[1]) %>% plot_ly(x=~get(crosstabs()), y=~Percentage, color=~response,colors=sequential_hcl(15,"SunsetDark"),type='bar', height=800,hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', Percentage,'%',sep="")) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[1],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=150, b=250),barmode='stack', xaxis=list(title=""))
-        p_list<-assign(paste("p",len,sep="_"), lapply(2:len, function(x) df() %>% filter(sub_question==sub_q[x]) %>% plot_ly(x=~get(crosstabs()), y=~Percentage, color=~response,colors=sequential_hcl(15,"SunsetDark"),type='bar',showlegend=FALSE, height=800,hoverinfo='text',text= ~paste(sub_question,'<br>', response, ': ', Percentage,'%',sep="")) %>% layout(annotations=list(text = sprintf(paste("<b>",sub_q[x],"</b>")),xref="paper",yref="paper",yanchor="bottom",xanchor="center",align="center",x=0.5,y=1,showarrow=FALSE,textangle=-45),legend=list(.08,.08),margin=list(l=50, r=0, t=150, b=250),barmode='stack', xaxis=list(title=""))))
-        p_list[[len]]<-p_list_1
-        p<-subplot(p_list,shareX=TRUE,shareY=TRUE) %>% layout(showlegend=TRUE,xaxis=list(title = ""))
-    }
-    } else if(!is.null(crosstabs())){
-      p<-plot_ly(df(), x=~response, y=~Percentage, color=~get(crosstabs()), colors=sequential_hcl(15,"SunsetDark"), type="bar",hoverinfo='text',text=~paste(get(crosstabs()),'<br>',response,'<br>Percentage: ', Percentage,'%',sep=""), height=600) %>% layout(bargap=5,legend=list(.08,.08),margin=list(l=50, r=50, t=50, b=200),xaxis=list(title = ""))
-    } else if(is.null(crosstabs())){
-      p<-plot_ly(df(), x=~response, y=~Percentage, color=~response, colors=sequential_hcl(15,"SunsetDark"), type="bar",hoverinfo='text',text= ~paste('<br>',response,'<br>Percentage: ', Percentage,'%',sep=""), height=600) %>% layout(bargap=5,legend=list(.08,.08),margin=list(l=50, r=50, t=50, b=200),barmode='relative',xaxis=list(title = ""))
-    }
-  })
-  # color used to be "RdYlBu"
   
-  output$graph<-renderPlotly({
-    p()
+  plot<-reactive({
+      if(dataStore$dataLoc[1][1] %in% names(multipart)){
+        if(is.null(crosstabs())){
+          plot<-ggplot(df(), aes(x=sub_question,fill=Response,group=rev(Response))) +
+            ylab("Percentage") + xlab("") + plot_theme + 
+            geom_bar_interactive(aes(tooltip = paste0("<strong>Response:</strong> ",HTMLencode(Response),"<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage,fill=Response),stat="identity",size=2, show.legend=TRUE) +
+            #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response),size=2.5,vjust=-.5,color="#959595")} +
+            scale_fill_manual(values=palette[1:length(levels(df()$Response))],name="Legend") +
+            #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend") +
+            scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
+            guides(fill=guide_legend(ncol=1))   
+        } else if(!is.null(crosstabs())){
+          plot<-ggplot(df(), aes(x=sub_question,fill=Response,group=rev(Response))) +
+            ylab("Percentage") + xlab("") + plot_theme + facet_grid(get(crosstabs())~.) +
+            geom_bar_interactive(aes(tooltip = paste0("<strong>Crosstab:</strong> ",HTMLencode(get(crosstabs())),"<br><strong>Category:</strong> ",HTMLencode(sub_question),"<br><strong>Response:</strong> ",HTMLencode(Response),"<br><strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity",size=2, show.legend=TRUE,drop=FALSE) +
+            #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response),size=2.5,vjust=-.5,color="#959595")} +
+            scale_fill_manual(values=palette[1:length(levels(df()$Response))],name="Legend") +
+            #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend") +
+            scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
+            guides(fill=guide_legend(ncol=1))          
+        }
+      } else {
+        if(is.null(crosstabs())){
+          plot<-ggplot(df(), aes(x=Response,fill=Response)) +
+            ylab("Percentage") + xlab("") + plot_theme +
+            geom_bar_interactive(aes(tooltip = paste0("<strong>Response:</strong> ",HTMLencode(Response),"<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity", size=2, show.legend=TRUE) +
+            #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response),size=2.5,vjust=-.5,color="#959595")} +
+            scale_fill_manual(values=palette[1:length(levels(df()$Response))],name="Legend") +
+            #scale_fill_discrete_sequential(palette="SunsetDark",name="Legend",drop=FALSE) +
+            scale_x_discrete() +
+            scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
+            guides(fill=guide_legend(ncol=1))
+        } else if(!is.null(crosstabs())){
+          plot<-ggplot(df(), aes(x=Response,y=Percentage,fill=factor(get(crosstabs())),group=factor(get(crosstabs())))) +
+            ylab("Percentage") + xlab("") + plot_theme + 
+            geom_bar_interactive(aes(tooltip=paste0("<strong>Crosstab:</strong> ",get(crosstabs()),"<br><strong>Response:</strong> ",HTMLencode(Response),"<br> <strong>Percentage:</strong> ", round(Percentage,2),"%")),stat="identity",size=1.5,show.legend=TRUE,position="dodge") + 
+            #{if(input$labels=="On") geom_text(aes(y=Percentage,label=paste0(Percentage,"%"),x=Response,group=factor(get(crosstabs()))),position=position_dodge(width=1),size=2.5,color="#959595",angle=90,hjust=-.15)} +
+            scale_fill_manual(values=palette[1:length(levels(df()[[1]]))],drop=FALSE,name="Legend") +
+            scale_x_discrete() +
+            scale_y_continuous(limits=c(0,NA),expand=expand_scale(add=c(0,3.25))) +
+            guides(fill=guide_legend(ncol=1))          
+        }
+      }
+  })
+  
+  output$graph<-renderGirafe({
+    girafe_options(girafe(ggobj=plot()),width_svg=7,height_svg=6,opts_zoom(.5,2),opts_toolbar(saveaspng=FALSE),opts_sizing(rescale=FALSE,width=1),opts_tooltip(css="font-family:arial;font-size:12px;background-color:#ffffff;padding:5px;border-radius:7px;box-shadow:2px 2px #555555;"))
+  })
+  
+  output$error<-renderText({
   })
     
   ## return to questions list ##
@@ -226,7 +256,4 @@ server <- function(input, output, session) {
 
 enableBookmarking(store = "url")
 shinyApp(ui, server)
-
-
-
 
