@@ -11,6 +11,7 @@ library(ggiraph)
 
 JAD<-readRDS(url("https://www.dropbox.com/s/nx09f4imh6b02kg/JAD.rds?dl=1"))
 JAD_copy<-readRDS(url("https://www.dropbox.com/s/lb8zo1c5s7qmn24/JAD_original.rds?dl=1"))
+palette<-readRDS(url("https://www.dropbox.com/s/y4paezgfjk8ddcm/palette.rds?dl=1"))
 
 
 
@@ -260,49 +261,51 @@ server <- function(input, output, session) {
     
     data<-data %>% filter(year >= input$yearInput[1],year <= input$yearInput[2]) # change year range #
     
+    pubIDs<-(data %>% distinct(pubID))[[1]]
+    
     ## manipulate data for plotting ##
     if(input$percentInput=="Frequency" & input$ygInput=="Variable"){
-      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by_at(input$varFilter,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count) %>% distinct_at(vars(input$varFilter,Count),.keep_all=TRUE)}
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by_at(input$varFilter,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count,pubID) %>% distinct_at(vars(input$varFilter,Count),.keep_all=TRUE)}
     if(input$percentInput=="Frequency" & input$ygInput=="Year"){
-      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by(year,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count) %>% distinct(year,.keep_all=TRUE)}
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by(year,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count,pubID) %>% distinct(year,.keep_all=TRUE)}
     if(input$percentInput=="Percentage" & input$ygInput=="Year"){ 
-      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by(year,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count,year_distinct) %>% distinct(year,.keep_all=TRUE) %>% ungroup() %>% mutate(Percentage=Count/year_distinct*100)}
+      data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by(year,.drop=FALSE) %>% mutate(Count=n()) %>% select(Count,year_distinct,pubID) %>% distinct(year,.keep_all=TRUE) %>% ungroup() %>% mutate(Percentage=Count/year_distinct*100)}
     if(input$percentInput=="Percentage" & input$ygInput=="Variable"){
       data<-data %>% distinct(pubID,.keep_all=TRUE) %>% group_by_at(input$varFilter,.drop=FALSE) %>% mutate(Count=n()) %>% distinct_at(vars(input$varFilter,Count,var_distinct),.keep_all=TRUE) %>% ungroup() %>% mutate(Percentage=Count/var_distinct*100)}
     
-    data<-as.data.frame(data)
+    list(data=as.data.frame(data),pubIDs=pubIDs)
   })
   
   #### create plot ####
   plot<-reactive({
     if(input$percentInput=="Percentage" & input$ygInput=="Variable"){
-      ggplot(filtered(), aes_string(x=input$varFilter)) +
+      ggplot(filtered()$data, aes_string(x=input$varFilter)) +
         ylab("Percentage") + xlab("") + plot_theme + 
-        geom_bar_interactive(aes(tooltip = paste0("<strong>Variable:</strong> " , get(input$varFilter), "<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity", size=2, show.legend=TRUE,fill="#a2c6da") +
-        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$Count))))) +
+        geom_bar_interactive(aes(tooltip = paste0("<strong>Variable:</strong> " , get(input$varFilter), "<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage),stat="identity", size=2, show.legend=TRUE,fill=palette[3]) +
+        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$data$Count))))) +
         scale_x_discrete(drop=FALSE) +
         theme(legend.position="bottom")
     } else if (input$percentInput=="Frequency" & input$ygInput=="Variable"){
-      ggplot(filtered(), aes_string(x=input$varFilter)) +
+      ggplot(filtered()$data, aes_string(x=input$varFilter)) +
         ylab("Frequency") + xlab(paste(input$varFilter)) + plot_theme + 
-        geom_bar_interactive(aes(tooltip=paste0("<strong>Variable:</strong> " ,get(input$varFilter), "<br> <strong>Count:</strong> ", round(Count,2)),y=Count),stat="identity", size=1, show.legend=TRUE,fill="#a2c6da") +
-        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$Count))))) +
+        geom_bar_interactive(aes(tooltip=paste0("<strong>Variable:</strong> " ,get(input$varFilter), "<br> <strong>Count:</strong> ", round(Count,2)),y=Count),stat="identity", size=1, show.legend=TRUE,fill=palette[3]) +
+        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$data$Count))))) +
         scale_x_discrete(drop=FALSE) +
         theme(legend.position="right",legend.direction="vertical",legend.key.size=unit(6.5,"points"),legend.margin=margin(0),legend.justification="top",legend.box.margin=margin(0),legend.text=element_text(size=7.5),legend.title=element_text(size=8)) +
         guides(fill=guide_legend(ncol=1))
     } else if (input$percentInput=="Percentage" & input$ygInput=="Year"){
-      ggplot(filtered(), aes(x=year)) +
-        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$Count))))) +
+      ggplot(filtered()$data, aes(x=year)) +
+        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$data$Count))))) +
         scale_x_continuous(breaks=seq(1980,2017,5),labels=seq(1980,2017,5),name="Year") +
         ylab("Percentage") + xlab("Year") + plot_theme + 
-        geom_bar_interactive(aes(tooltip = paste0("<strong>Year:</strong> " ,year, "<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage,fill=year),stat="identity", size=2, show.legend=TRUE,fill="#a2c6da") +
+        geom_bar_interactive(aes(tooltip = paste0("<strong>Year:</strong> " ,year, "<br> <strong>Percentage:</strong> ", round(Percentage,2),"%"),y=Percentage,fill=year),stat="identity", size=2, show.legend=TRUE,fill=palette[3]) +
         theme(legend.position="bottom")
     } else { # frequency by year #
-      ggplot(filtered(), aes(x=year)) +
-        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$Count))))) +
+      ggplot(filtered()$data, aes(x=year)) +
+        scale_y_continuous(expand=expand_scale(add=c(0,sqrt(max(filtered()$data$Count))))) +
         scale_x_continuous(breaks=seq(1980,2017,5),labels=seq(1980,2017,5),name="Year") +
         ylab("Frequency") + xlab("Year") + plot_theme + 
-        geom_bar_interactive(aes(tooltip = paste0("<strong>Year:</strong> " ,year, "<br> <strong>Count:</strong> ", round(Count,2)),y=Count,fill=year),stat="identity", size = 2, show.legend=TRUE,fill="#a2c6da") +
+        geom_bar_interactive(aes(tooltip = paste0("<strong>Year:</strong> " ,year, "<br> <strong>Count:</strong> ", round(Count,2)),y=Count,fill=year),stat="identity", size = 2, show.legend=TRUE,fill=palette[3]) +
         theme(legend.position="bottom")
     }
   })
@@ -312,15 +315,16 @@ server <- function(input, output, session) {
   })
   
   #### test printout #### 
-  output$view<-renderText({}) 
+  output$view<-renderText({
+    }) 
   ########
   
   #### download csv file ####
-  pubID<-reactive({data.frame(as.integer(names(table(filtered()$pubID))))[[1]]})
   csvDownload<-reactive({
     data<-JAD_copy
-    data<-data[data$pubID %in% pubID(),]
+    data<-data[data$pubID %in% filtered()$pubIDs,]
     data<-as.data.frame(data)
+    data
   })
   
   output$download<-downloadHandler(filename=function(){
